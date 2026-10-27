@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- Brand Primary & Accent -->
+    <color name="primary_blue">#1A365D</color>
+    <color name="accent_sky_blue">#3182CE</color>
+
+    <!-- Backgrounds -->
+    <color name="background_light">#F7FAFC</color>
+    <color name="card_white">#FFFFFF</color>
+
+    <!-- Typography -->
+    <color name="text_dark">#1A202C</color>
+    <color name="text_muted">#718096</color>
+
+    <!-- Status Colors -->
+    <color name="success_green">#38A169</color>
+    <color name="error_red">#E53E3E</color>
 </resources>
