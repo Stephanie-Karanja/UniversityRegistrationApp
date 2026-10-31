@@ -15,4 +15,6 @@
     <!-- Status Colors -->
     <color name="success_green">#38A169</color>
     <color name="error_red">#E53E3E</color>
+
+
 </resources>

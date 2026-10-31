@@ -1,3 +1,23 @@
 <resources>
     <string name="app_name">UniversityRegistrationApp</string>
+
+
+
+        <string-array name="courses">
+            <item>-- Select Course --</item>
+            <item>BSc Computer Science</item>
+            <item>BSc Information Technology</item>
+            <item>BSc Data Science</item>
+            <item>BSc Software Engineering</item>
+            <item>BCom Business Administration</item>
+        </string-array>
+
+        <string-array name="departments">
+            <item>-- Select Department --</item>
+            <item>Computing and Informatics</item>
+            <item>Mathematics and Statistics</item>
+            <item>Business and Economics</item>
+            <item>Engineering</item>
+        </string-array>
+
 </resources>
