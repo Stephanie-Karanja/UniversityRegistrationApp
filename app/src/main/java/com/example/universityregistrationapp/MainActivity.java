@@ -1,5 +1,5 @@
 package com.example.universityregistrationapp;
-
+import com.example.universityregistration.R;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;

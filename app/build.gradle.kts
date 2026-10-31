@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.universityregistrationapp"
+    namespace = "com.example.universityregistration"
     compileSdk {
         version = release(37)
     }
