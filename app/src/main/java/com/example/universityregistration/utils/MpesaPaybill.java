@@ -15,7 +15,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 public class MpesaPaybill {
-    private static final String API_BASE_URL = "https://replace-with-your-deployed-server";
+    private static final String API_BASE_URL = "https://universityregistrationapp.onrender.com";
 
     private MpesaPaybill() {}
 

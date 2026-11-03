@@ -18,7 +18,13 @@ loadLocalSettings();
 const port = Number(process.env.PORT || 3000);
 const dataDirectory = path.join(__dirname, "data");
 const paymentsFile = path.join(dataDirectory, "payments.json");
-const darajaBaseUrl = "https://api.safaricom.co.ke";
+const darajaEnvironment = (process.env.DARAJA_ENV || "sandbox").toLowerCase();
+if (darajaEnvironment !== "sandbox" && darajaEnvironment !== "production") {
+    throw new Error("DARAJA_ENV must be either sandbox or production");
+}
+const darajaBaseUrl = darajaEnvironment === "production"
+    ? "https://api.safaricom.co.ke"
+    : "https://sandbox.safaricom.co.ke";
 const maxAmount = 150000;
 const requestLimits = new Map();
 const phoneRequestLimits = new Map();
@@ -179,17 +185,36 @@ function callbackMetadata(callback) {
     return Object.fromEntries(items.map((item) => [item.Name, item.Value]));
 }
 
+function safeRequestSuffix(checkoutRequestId) {
+    return typeof checkoutRequestId === "string" ? checkoutRequestId.slice(-6) : "unknown";
+}
+
 async function processCallback(payload) {
     const callback = payload?.Body?.stkCallback;
     const checkoutRequestId = callback?.CheckoutRequestID;
+    const requestSuffix = safeRequestSuffix(checkoutRequestId);
+    if (!callback || !checkoutRequestId) {
+        console.warn("Daraja callback received without a valid STK callback or request ID");
+        return;
+    }
+
+    console.log(`Daraja callback received for request ...${requestSuffix}, result code ${callback.ResultCode}`);
     const payment = payments[checkoutRequestId];
-    if (!payment || payment.status !== "PENDING") return;
+    if (!payment) {
+        console.warn(`No saved payment matches callback request ...${requestSuffix}`);
+        return;
+    }
+    if (payment.status !== "PENDING") {
+        console.log(`Ignoring duplicate callback for request ...${requestSuffix}, current status ${payment.status}`);
+        return;
+    }
 
     const resultCode = Number(callback.ResultCode);
     if (resultCode !== 0) {
         payment.status = "FAILED";
         payment.failureReason = String(callback.ResultDesc || "Payment was not completed").slice(0, 160);
         savePayments();
+        console.log(`Payment request ...${requestSuffix} marked FAILED by Safaricom`);
         return;
     }
 
@@ -201,14 +226,17 @@ async function processCallback(payload) {
         payment.status = "FAILED";
         payment.failureReason = "Payment callback did not match the requested amount and phone";
         savePayments();
+        console.warn(`Payment callback verification mismatch for request ...${requestSuffix}`);
         return;
     }
 
+    console.log(`Querying Daraja to verify successful callback for request ...${requestSuffix}`);
     const queryResult = await queryStkPush(checkoutRequestId);
     if (Number(queryResult.ResultCode) !== 0) {
         payment.status = "FAILED";
         payment.failureReason = String(queryResult.ResultDesc || "Safaricom did not confirm payment").slice(0, 160);
         savePayments();
+        console.warn(`Daraja query did not confirm payment request ...${requestSuffix}`);
         return;
     }
 
@@ -216,6 +244,7 @@ async function processCallback(payload) {
     payment.receiptNumber = receiptNumber;
     payment.paidAt = new Date().toISOString();
     savePayments();
+    console.log(`Payment request ...${requestSuffix} confirmed as PAID`);
 }
 
 const server = http.createServer(async (request, response) => {
@@ -231,6 +260,7 @@ const server = http.createServer(async (request, response) => {
             sendJson(response, 200, { ResultCode: 0, ResultDesc: "Accepted" });
             processCallback(body).catch((error) => console.error("Callback verification failed:", error.message));
         } catch (error) {
+            console.error("Could not read Daraja callback:", error.message);
             sendJson(response, 400, { error: error.message });
         }
         return;
