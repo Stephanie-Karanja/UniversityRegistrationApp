@@ -18,7 +18,13 @@ loadLocalSettings();
 const port = Number(process.env.PORT || 3000);
 const dataDirectory = path.join(__dirname, "data");
 const paymentsFile = path.join(dataDirectory, "payments.json");
-const darajaBaseUrl = "https://api.safaricom.co.ke";
+const darajaEnvironment = (process.env.DARAJA_ENV || "sandbox").toLowerCase();
+if (darajaEnvironment !== "sandbox" && darajaEnvironment !== "production") {
+    throw new Error("DARAJA_ENV must be either sandbox or production");
+}
+const darajaBaseUrl = darajaEnvironment === "production"
+    ? "https://api.safaricom.co.ke"
+    : "https://sandbox.safaricom.co.ke";
 const maxAmount = 150000;
 const requestLimits = new Map();
 const phoneRequestLimits = new Map();
