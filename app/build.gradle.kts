@@ -9,7 +9,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.universityregistrationapp"
+        applicationId = "com.example.universityregistration"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
