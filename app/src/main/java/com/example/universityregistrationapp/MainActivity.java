@@ -1,5 +1,5 @@
 package com.example.universityregistrationapp;
-import com.example.universityregistration.R;
+import com.example.universityregistrationapp.R;
 import android.os.Bundle;
 import android.content.Intent;
 import android.widget.Button;
