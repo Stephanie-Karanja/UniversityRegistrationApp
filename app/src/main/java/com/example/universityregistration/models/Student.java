@@ -1,6 +1,7 @@
 package com.example.universityregistration.models;
+import java.io.Serializable;
 
-public class Student {
+public class Student implements Serializable {
     private String fullName;
     private String idNumber;
     private String regNumber;
