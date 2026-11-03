@@ -2,7 +2,7 @@ package com.example.universityregistration.activities;
 
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
-import com.example.universityregistration.R;
+import com.example.universityregistrationapp.R;
 
 public class LibraryActivity extends AppCompatActivity {
     @Override
