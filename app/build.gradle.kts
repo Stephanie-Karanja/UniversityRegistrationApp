@@ -1,15 +1,14 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.google.services)
 }
 
 android {
-    namespace = "com.example.universityregistrationapp"
-    compileSdk {
-        version = release(37)
-    }
+    namespace = "com.example.universityregistration"
+    compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.example.universityregistrationapp"
+        applicationId = "com.example.universityregistration"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
@@ -20,9 +19,11 @@ android {
 
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "keepRules/rules.keep"
+            )
         }
     }
     compileOptions {
@@ -36,6 +37,12 @@ dependencies {
     implementation(libs.appcompat)
     implementation(libs.constraintlayout)
     implementation(libs.material)
+
+    // Firebase BoM and Database / Firestore
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.database)
+    implementation(libs.firebase.firestore)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)

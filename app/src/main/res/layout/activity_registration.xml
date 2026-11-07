@@ -1,79 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_light">
+    android:background="@color/background_light"
+    android:fillViewport="true"
+    tools:context=".activities.RegistrationActivity">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:padding="16dp">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Student Registration"
             android:textColor="@color/text_dark"
-            android:textSize="24sp"
+            android:textSize="22sp"
             android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Personal Details"
-            android:textColor="@color/text_dark"
-            android:textSize="16sp"
-            android:layout_marginBottom="20dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Full Names"
-            android:textColor="@color/text_dark"
-            android:textStyle="bold" />
+            android:gravity="center"
+            android:layout_marginBottom="16dp" />
 
         <EditText
-            android:id="@+id/etFullNames"
+            android:id="@+id/etFullName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Enter your full names"
-            android:inputType="textPersonName|textCapWords"
+            android:hint="Full Names"
+            android:inputType="textPersonName"
+            android:autofillHints="name"
             android:textColor="@color/text_dark"
+            android:textColorHint="@color/text_muted"
             android:layout_marginBottom="12dp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="ID Number"
-            android:textColor="@color/text_dark"
-            android:textStyle="bold" />
-
         <EditText
-            android:id="@+id/etIdNo"
+            android:id="@+id/etIdNumber"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Enter your ID number"
+            android:hint="ID Number"
             android:inputType="number"
-            android:maxLength="8"
+            android:autofillHints="personId"
             android:textColor="@color/text_dark"
+            android:textColorHint="@color/text_muted"
             android:layout_marginBottom="12dp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Registration Number"
-            android:textColor="@color/text_dark"
-            android:textStyle="bold" />
-
         <EditText
-            android:id="@+id/etRegNo"
+            android:id="@+id/etRegNumber"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="e.g. SC211/0001/2026"
-            android:inputType="textCapCharacters"
+            android:hint="Registration Number"
+            android:inputType="text"
+            android:autofillHints="username"
             android:textColor="@color/text_dark"
+            android:textColorHint="@color/text_muted"
             android:layout_marginBottom="12dp" />
 
         <TextView
@@ -81,7 +61,8 @@
             android:layout_height="wrap_content"
             android:text="Gender"
             android:textColor="@color/text_dark"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
 
         <RadioGroup
             android:id="@+id/rgGender"
@@ -95,15 +76,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Male"
-                android:textColor="@color/text_dark" />
+                android:textColor="@color/text_dark"
+                android:layout_marginEnd="24dp" />
 
             <RadioButton
                 android:id="@+id/rbFemale"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Female"
-                android:textColor="@color/text_dark"
-                android:layout_marginStart="24dp" />
+                android:textColor="@color/text_dark" />
         </RadioGroup>
 
         <TextView
@@ -111,12 +92,13 @@
             android:layout_height="wrap_content"
             android:text="Course"
             android:textColor="@color/text_dark"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
 
         <Spinner
-            android:id="@+id/spCourse"
+            android:id="@+id/spinnerCourse"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="wrap_content"
             android:layout_marginBottom="12dp" />
 
         <TextView
@@ -124,21 +106,41 @@
             android:layout_height="wrap_content"
             android:text="Department"
             android:textColor="@color/text_dark"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
 
         <Spinner
-            android:id="@+id/spDepartment"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginBottom="24dp" />
-
-        <Button
-            android:id="@+id/btnNext"
+            android:id="@+id/spinnerDepartment"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Next"
-            android:textColor="@android:color/white"
-            android:backgroundTint="@color/primary_blue" />
+            android:layout_marginBottom="24dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2">
+
+            <Button
+                android:id="@+id/btnBack"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Back"
+                android:backgroundTint="@color/text_muted"
+                android:textColor="@color/card_white"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btnNext"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Next"
+                android:backgroundTint="@color/primary_blue"
+                android:textColor="@color/card_white"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>

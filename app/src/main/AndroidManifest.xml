@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:allowBackup="true"
@@ -13,27 +14,34 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.UniversityRegistrationApp">
-        <activity
-            android:name="com.example.universityregistration.activities.PaymentActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name="com.example.universityregistration.activities.RegistrationActivity"
-            android:exported="true" >
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
 
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
-        </activity>
         <activity
-            android:name=".MainActivity"
-
+            android:name="com.example.universityregistrationapp.MainActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
 
-
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
+
+        <activity
+            android:name="com.example.universityregistration.activities.RegistrationActivity"
+            android:exported="false" />
+        <activity
+            android:name="com.example.universityregistration.activities.LibraryActivity"
+            android:exported="false" />
+        <activity
+            android:name="com.example.universityregistration.activities.HostelActivity"
+            android:exported="false" />
+        <activity
+            android:name="com.example.universityregistration.activities.PaymentActivity"
+            android:exported="false" />
+        <activity
+            android:name="com.example.universityregistration.activities.SummaryActivity"
+            android:exported="true" />
+
     </application>
 
 </manifest>

@@ -1,180 +1,91 @@
 package com.example.universityregistration.activities;
 
-import android.os.Bundle;
 import android.content.Intent;
-import android.os.Handler;
-import android.os.Looper;
-import android.view.View;
+import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.example.universityregistrationapp.R;
+import com.example.universityregistration.R;
+import com.example.universityregistration.models.PaymentTransaction;
+import com.example.universityregistration.database.FirebaseHelper;
 import com.example.universityregistration.utils.MpesaPaybill;
 
-import org.json.JSONObject;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 public class PaymentActivity extends AppCompatActivity {
-    private static final long STATUS_CHECK_INTERVAL_MS = 5000;
-    private static final int MAX_AUTOMATIC_STATUS_CHECKS = 120;
 
-    private final ExecutorService networkExecutor = Executors.newSingleThreadExecutor();
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private EditText studentReferenceInput;
-    private EditText phoneInput;
-    private EditText amountInput;
-    private Button payButton;
-    private Button checkStatusButton;
-    private TextView paymentStatusText;
-    private String checkoutRequestId;
-    private int statusCheckCount;
-    private final Runnable automaticStatusCheck = this::checkPaymentStatus;
+    // ui views for m-pesa payment
+    private EditText etPhoneNumber, etAmount;
+    private TextView tvPaymentStatus;
+    private FirebaseHelper firebaseHelper;
+    private String studentId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_payment);
 
-        studentReferenceInput = findViewById(R.id.studentReferenceInput);
-        phoneInput = findViewById(R.id.phoneInput);
-        amountInput = findViewById(R.id.amountInput);
-        payButton = findViewById(R.id.payButton);
-        checkStatusButton = findViewById(R.id.checkStatusButton);
-        paymentStatusText = findViewById(R.id.paymentStatusText);
+        // bind views from xml
+        etPhoneNumber = findViewById(R.id.etPhoneNumber);
+        etAmount = findViewById(R.id.etAmount);
+        Button btnPayMpesa = findViewById(R.id.btnPayMpesa);
+        Button btnViewSummary = findViewById(R.id.btnViewSummary);
+        Button btnBack = findViewById(R.id.btnBack);
+        tvPaymentStatus = findViewById(R.id.tvPaymentStatus);
 
-        payButton.setOnClickListener(view -> startPayment());
-        checkStatusButton.setOnClickListener(view -> checkPaymentStatus());
-    }
-
-    private void startPayment() {
-        String studentReference = studentReferenceInput.getText().toString().trim();
-        String phoneNumber = MpesaPaybill.normalizeKenyanPhone(phoneInput.getText().toString());
-        String amountText = amountInput.getText().toString().trim();
-
-        if (studentReference.isEmpty()) {
-            studentReferenceInput.setError("Enter your admission or student number");
-            return;
-        }
-        if (phoneNumber == null) {
-            phoneInput.setError("Enter a valid Kenyan mobile number, e.g. 0712345678");
-            return;
+        firebaseHelper = new FirebaseHelper();
+        studentId = getIntent().getStringExtra("STUDENT_ID");
+        if (studentId == null) {
+            studentId = "674735"; // default student id fallback
         }
 
-        int amount;
-        try {
-            amount = Integer.parseInt(amountText);
-        } catch (NumberFormatException exception) {
-            amountInput.setError("Enter the amount in whole Kenyan shillings");
-            return;
-        }
-        if (amount < 1 || amount > 150000) {
-            amountInput.setError("Enter an amount from KSh 1 to KSh 150,000");
-            return;
+        // handle back button click
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> finish());
         }
 
-        setFormEnabled(false);
-        payButton.setText("Sending prompt...");
-        paymentStatusText.setText("Contacting M-PESA. Please wait...");
-        networkExecutor.execute(() -> {
-            try {
-                JSONObject response = MpesaPaybill.requestStkPush(phoneNumber, amount, studentReference);
-                String requestId = response.optString("checkoutRequestId");
-                if (requestId.isEmpty()) {
-                    throw new IllegalStateException("Payment service did not return a request ID.");
+        // handle m-pesa payment button click
+        btnPayMpesa.setOnClickListener(v -> {
+            String phone = etPhoneNumber.getText().toString().trim();
+            String amountStr = etAmount.getText().toString().trim();
+
+            // validate phone and amount
+            if (phone.isEmpty() || amountStr.isEmpty()) {
+                Toast.makeText(this, "please enter phone number and fee amount", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            double amount = Double.parseDouble(amountStr);
+            Toast.makeText(this, "sending m-pesa stk push to " + phone + "...", Toast.LENGTH_SHORT).show();
+
+            // trigger m-pesa paybill simulation
+            MpesaPaybill.triggerStkPush(phone, amount, new MpesaPaybill.MpesaCallback() {
+                @Override
+                public void onSuccess(String transactionId) {
+                    tvPaymentStatus.setText("status: payment confirmed (m-pesa)");
+                    tvPaymentStatus.setTextColor(getResources().getColor(R.color.success_green));
+
+                    // save confirmed payment transaction to firebase
+                    PaymentTransaction tx = new PaymentTransaction(studentId, phone, amount, transactionId, "confirmed");
+                    firebaseHelper.savePaymentTransaction(tx);
+
+                    Toast.makeText(PaymentActivity.this, "m-pesa payment confirmed! registration status updated.", Toast.LENGTH_LONG).show();
                 }
-                runOnUiThread(() -> {
-                    if (isFinishing() || isDestroyed()) return;
-                    checkoutRequestId = requestId;
-                    statusCheckCount = 0;
-                    payButton.setText("Prompt sent");
-                    checkStatusButton.setVisibility(View.VISIBLE);
-                    paymentStatusText.setText("M-PESA prompt sent to " + phoneNumber
-                            + ". Enter your M-PESA PIN on your phone to approve it.");
-                    mainHandler.postDelayed(automaticStatusCheck, STATUS_CHECK_INTERVAL_MS);
-                });
-            } catch (Exception exception) {
-                runOnUiThread(() -> {
-                    if (isFinishing() || isDestroyed()) return;
-                    paymentStatusText.setText("Could not start payment: " + exception.getMessage());
-                    setFormEnabled(true);
-                    payButton.setText("Try payment again");
-                });
-            }
+
+                @Override
+                public void onError(String message) {
+                    tvPaymentStatus.setText("status: payment failed");
+                    tvPaymentStatus.setTextColor(getResources().getColor(R.color.error_red));
+                    Toast.makeText(PaymentActivity.this, message, Toast.LENGTH_LONG).show();
+                }
+            });
         });
-    }
 
-    private void checkPaymentStatus() {
-        if (checkoutRequestId == null) return;
-        mainHandler.removeCallbacks(automaticStatusCheck);
-        checkStatusButton.setEnabled(false);
-        networkExecutor.execute(() -> {
-            try {
-                JSONObject response = MpesaPaybill.checkPaymentStatus(checkoutRequestId);
-                String status = response.optString("status", "PENDING");
-                runOnUiThread(() -> handlePaymentStatus(status, response));
-            } catch (Exception exception) {
-                runOnUiThread(() -> {
-                    if (isFinishing() || isDestroyed()) return;
-                    paymentStatusText.setText("Could not check payment status. Check your connection and try again.");
-                    checkStatusButton.setEnabled(true);
-                    checkStatusButton.setText("Retry status check");
-                    checkStatusButton.setVisibility(View.VISIBLE);
-                });
-            }
+        // navigate to summary reports activity
+        btnViewSummary.setOnClickListener(v -> {
+            Intent intent = new Intent(PaymentActivity.this, SummaryActivity.class);
+            intent.putExtra("STUDENT_ID", studentId);
+            startActivity(intent);
         });
-    }
-
-    private void handlePaymentStatus(String status, JSONObject response) {
-        if (isFinishing() || isDestroyed()) return;
-        checkStatusButton.setEnabled(true);
-        if ("PAID".equalsIgnoreCase(status)) {
-            String receiptNumber = response.optString("receiptNumber", "");
-            paymentStatusText.setText("Payment confirmed by Safaricom. Receipt: " + receiptNumber);
-            Intent result = new Intent();
-            result.putExtra("paymentConfirmed", true);
-            result.putExtra("transactionId", receiptNumber);
-            result.putExtra("studentReference", studentReferenceInput.getText().toString().trim());
-            result.putExtra("amount", Integer.parseInt(amountInput.getText().toString().trim()));
-            setResult(RESULT_OK, result);
-            finish();
-            return;
-        }
-        if ("FAILED".equalsIgnoreCase(status)) {
-            paymentStatusText.setText("Payment was not completed. "
-                    + response.optString("failureReason", "Please try again."));
-            checkoutRequestId = null;
-            checkStatusButton.setVisibility(View.GONE);
-            setFormEnabled(true);
-            payButton.setText("Try payment again");
-            return;
-        }
-
-        statusCheckCount++;
-        paymentStatusText.setText("Payment is pending. Approve the M-PESA prompt on your phone.");
-        checkStatusButton.setText("Check payment status");
-        if (statusCheckCount < MAX_AUTOMATIC_STATUS_CHECKS) {
-            mainHandler.postDelayed(automaticStatusCheck, STATUS_CHECK_INTERVAL_MS);
-        } else {
-            paymentStatusText.append(" You can check again using the button.");
-        }
-    }
-
-    private void setFormEnabled(boolean enabled) {
-        studentReferenceInput.setEnabled(enabled);
-        phoneInput.setEnabled(enabled);
-        amountInput.setEnabled(enabled);
-        payButton.setEnabled(enabled);
-    }
-
-    @Override
-    protected void onDestroy() {
-        mainHandler.removeCallbacks(automaticStatusCheck);
-        networkExecutor.shutdownNow();
-        super.onDestroy();
     }
 }
