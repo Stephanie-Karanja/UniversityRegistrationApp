@@ -23,7 +23,7 @@ public class LibraryActivity extends AppCompatActivity {
 
     private static final String TAG = "LibraryActivity";
 
-    // ui views for library book request
+    // declare ui views for library book selection and student id
     private EditText etStudentId;
     private Spinner spinnerIsbn, spinnerAuthor, spinnerTitle, spinnerDateBorrowed, spinnerDateReturn;
     private FirebaseHelper firebaseHelper;
@@ -33,7 +33,7 @@ public class LibraryActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_library);
 
-        // bind views from xml layout
+        // bind views from xml layout file
         etStudentId = findViewById(R.id.etStudentId);
         spinnerIsbn = findViewById(R.id.spinnerIsbn);
         spinnerAuthor = findViewById(R.id.spinnerAuthor);
@@ -45,6 +45,7 @@ public class LibraryActivity extends AppCompatActivity {
 
         firebaseHelper = new FirebaseHelper();
 
+        // retrieve student id from intent or latest active session cache
         SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
         String studentId = getIntent().getStringExtra("STUDENT_ID");
         if (studentId == null || studentId.isEmpty()) {
@@ -54,7 +55,7 @@ public class LibraryActivity extends AppCompatActivity {
             etStudentId.setText(studentId);
         }
 
-        // 10 university textbook examples
+        // define 10 university textbook examples with titles, authors, and isbns
         String[] titles = {
                 "Software Engineering: A Practitioner's Approach",
                 "Introduction to International Relations: Theories and Approaches",
@@ -94,7 +95,7 @@ public class LibraryActivity extends AppCompatActivity {
                 "978-1260115680"
         };
 
-        // populate spinners
+        // populate dropdown spinners for title, author, and isbn
         ArrayAdapter<String> titleAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, titles);
         titleAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerTitle.setAdapter(titleAdapter);
@@ -107,7 +108,7 @@ public class LibraryActivity extends AppCompatActivity {
         isbnAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerIsbn.setAdapter(isbnAdapter);
 
-        // sync author and isbn when a book title is selected
+        // sync author and isbn spinners automatically when a book title is chosen
         spinnerTitle.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -119,24 +120,24 @@ public class LibraryActivity extends AppCompatActivity {
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        // populate date borrowed spinner
+        // populate borrow date selection spinner
         String[] borrowDates = {"01/10/2026", "02/10/2026", "03/10/2026", "04/10/2026"};
         ArrayAdapter<String> borrowAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, borrowDates);
         borrowAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerDateBorrowed.setAdapter(borrowAdapter);
 
-        // populate return date spinner
+        // populate return date selection spinner
         String[] returnDates = {"01/12/2026", "15/12/2026", "31/12/2026", "15/01/2027"};
         ArrayAdapter<String> returnAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, returnDates);
         returnAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerDateReturn.setAdapter(returnAdapter);
 
-        // handle back button click
+        // handle back button click to return to previous activity
         if (btnBack != null) {
             btnBack.setOnClickListener(v -> finish());
         }
 
-        // handle proceed button click
+        // handle proceed button click to validate and submit library request
         btnProceedHostel.setOnClickListener(v -> {
             String sId = etStudentId.getText().toString().trim();
             String isbn = spinnerIsbn.getSelectedItem().toString();
@@ -151,11 +152,11 @@ public class LibraryActivity extends AppCompatActivity {
                 return;
             }
 
-            // create library request object and save to firebase
+            // create library request object and save to firebase under /library_requests/{sId}
             LibraryRequest request = new LibraryRequest(sId, isbn, title, author, dateBorrowed, dateReturn);
             firebaseHelper.saveLibraryRequest(request);
 
-            // safely merge into existing student profile in local cache without losing personal details
+            // merge book details into local student profile JSON without losing personal details
             try {
                 JSONObject json = getOrCreateStudentJson(prefs, sId);
                 json.put("bookTitle", title);
@@ -180,13 +181,14 @@ public class LibraryActivity extends AppCompatActivity {
 
             Toast.makeText(this, "library book request submitted successfully!", Toast.LENGTH_SHORT).show();
 
-            // navigate to hostel activity
+            // navigate to hostel accommodation activity
             Intent intent = new Intent(LibraryActivity.this, HostelActivity.class);
             intent.putExtra("STUDENT_ID", sId);
             startActivity(intent);
         });
     }
 
+    // helper method to retrieve existing student JSON profile or search by id/reg number
     private JSONObject getOrCreateStudentJson(SharedPreferences prefs, String studentId) {
         String jsonStr = prefs.getString(studentId, null);
         if (jsonStr == null || !jsonStr.contains("fullName")) {

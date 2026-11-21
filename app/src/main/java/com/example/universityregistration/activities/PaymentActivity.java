@@ -22,7 +22,7 @@ public class PaymentActivity extends AppCompatActivity {
 
     private static final String TAG = "PaymentActivity";
 
-    // ui views for m-pesa payment
+    // declare ui views for m-pesa payment
     private EditText etPhoneNumber, etAmount;
     private TextView tvPaymentStatus;
     private FirebaseHelper firebaseHelper;
@@ -75,7 +75,7 @@ public class PaymentActivity extends AppCompatActivity {
         });
     }
 
-    // simple m-pesa stk push pop-up dialog
+    // display simple m-pesa stk push pop-up prompt dialog
     private void showMpesaStkPushDialog(String phone, double amount) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("m-pesa stk push");
@@ -86,6 +86,7 @@ public class PaymentActivity extends AppCompatActivity {
         etPin.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
         builder.setView(etPin);
 
+        // handle positive send button click
         builder.setPositiveButton("send", (dialog, which) -> {
             String pin = etPin.getText().toString().trim();
             if (pin.length() < 4) {
@@ -134,6 +135,7 @@ public class PaymentActivity extends AppCompatActivity {
             Toast.makeText(this, "m-pesa payment confirmed! fee balance: kshs " + feeBalance, Toast.LENGTH_LONG).show();
         });
 
+        // handle negative cancel button click
         builder.setNegativeButton("cancel", (dialog, which) -> {
             dialog.dismiss();
             Toast.makeText(this, "m-pesa payment cancelled", Toast.LENGTH_SHORT).show();
@@ -142,6 +144,7 @@ public class PaymentActivity extends AppCompatActivity {
         builder.show();
     }
 
+    // helper method to retrieve existing student JSON profile or search by id/reg number
     private JSONObject getOrCreateStudentJson(SharedPreferences prefs, String studentId) {
         String jsonStr = prefs.getString(studentId, null);
         if (jsonStr == null || !jsonStr.contains("fullName")) {

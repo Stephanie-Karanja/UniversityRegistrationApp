@@ -23,7 +23,7 @@ public class RegistrationActivity extends AppCompatActivity {
 
     private static final String TAG = "RegistrationActivity";
 
-    // ui elements for student registration
+    // declare ui input components for first-year student personal details
     private EditText etFullName, etIdNumber, etRegNumber;
     private RadioGroup rgGender;
     private Spinner spinnerCourse, spinnerDepartment;
@@ -35,7 +35,7 @@ public class RegistrationActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registration);
 
-        // bind xml views
+        // bind layout views from xml file
         etFullName = findViewById(R.id.etFullName);
         etIdNumber = findViewById(R.id.etIdNumber);
         etRegNumber = findViewById(R.id.etRegNumber);
@@ -45,11 +45,11 @@ public class RegistrationActivity extends AppCompatActivity {
         Button btnNext = findViewById(R.id.btnNext);
         Button btnBack = findViewById(R.id.btnBack);
 
-        // initialize database and offline sync helpers
+        // instantiate database helper and offline caching manager
         firebaseHelper = new FirebaseHelper();
         offlineSyncManager = new OfflineSyncManager(this);
 
-        // populate course dropdown list with usiu courses
+        // populate course dropdown spinner with official usiu academic courses
         String[] courses = {
                 "Software Engineering",
                 "International Relations",
@@ -66,7 +66,7 @@ public class RegistrationActivity extends AppCompatActivity {
         courseAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerCourse.setAdapter(courseAdapter);
 
-        // populate department dropdown list with usiu departments
+        // populate department dropdown spinner with usiu academic departments
         String[] departments = {
                 "Business Administration",
                 "Finance & Accounting",
@@ -83,24 +83,24 @@ public class RegistrationActivity extends AppCompatActivity {
         deptAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerDepartment.setAdapter(deptAdapter);
 
-        // handle back button click
+        // handle back button click to finish activity and return
         if (btnBack != null) {
             btnBack.setOnClickListener(v -> finish());
         }
 
-        // handle next button click to validate and proceed
+        // handle next button click to validate inputs, save student profile, and proceed
         btnNext.setOnClickListener(v -> {
             String fullName = etFullName.getText().toString().trim();
             String idNumber = etIdNumber.getText().toString().trim();
             String regNumber = etRegNumber.getText().toString().trim();
 
-            // validate required text fields
+            // check that name, id number, and reg number fields are not empty
             if (fullName.isEmpty() || idNumber.isEmpty() || regNumber.isEmpty()) {
                 Toast.makeText(this, "please fill in all registration fields", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            // validate gender selection
+            // check that a radio button option for gender is selected
             int selectedGenderId = rgGender.getCheckedRadioButtonId();
             if (selectedGenderId == -1) {
                 Toast.makeText(this, "please select gender", Toast.LENGTH_SHORT).show();
@@ -109,17 +109,17 @@ public class RegistrationActivity extends AppCompatActivity {
             RadioButton rbGender = findViewById(selectedGenderId);
             String gender = rbGender.getText().toString();
 
-            // get selected course and department from spinners
+            // retrieve selected course and department from dropdown spinners
             String course = spinnerCourse.getSelectedItem().toString();
             String department = spinnerDepartment.getSelectedItem().toString();
 
-            // create student model object
+            // create student data model instance
             Student student = new Student(fullName, idNumber, regNumber, gender, course, department);
 
-            // save data to firebase
+            // push student personal details to firebase realtime database under /students/{idNumber}
             firebaseHelper.saveStudentRegistration(student);
 
-            // save consolidated student profile to local shared preferences under ID and Reg Number
+            // save consolidated student profile in local shared preferences for offline reports
             try {
                 SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
                 JSONObject json = new JSONObject();
@@ -147,6 +147,7 @@ public class RegistrationActivity extends AppCompatActivity {
                         .putString("LATEST_STUDENT_ID", idNumber)
                         .apply();
 
+                // queue data in offline sync manager
                 offlineSyncManager.cacheDataLocally(idNumber, jsonStr);
             } catch (Exception e) {
                 Log.e(TAG, "error saving student registration to local prefs: " + e.getMessage());
@@ -154,7 +155,7 @@ public class RegistrationActivity extends AppCompatActivity {
 
             Toast.makeText(this, "student registered successfully!", Toast.LENGTH_SHORT).show();
 
-            // navigate to library activity
+            // navigate to library book request activity with student id intent extra
             Intent intent = new Intent(RegistrationActivity.this, LibraryActivity.class);
             intent.putExtra("STUDENT_ID", idNumber);
             startActivity(intent);
