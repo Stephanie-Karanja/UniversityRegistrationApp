@@ -154,9 +154,12 @@ public class LibraryActivity extends AppCompatActivity {
             LibraryRequest request = new LibraryRequest(sId, isbn, title, author, dateBorrowed, dateReturn);
             firebaseHelper.saveLibraryRequest(request);
 
-            // update consolidated profile in local cache
+            // safely merge into existing student profile in local cache without losing personal details
             try {
-                String existing = prefs.getString(sId, "{}");
+                String existing = prefs.getString(sId, null);
+                if (existing == null) {
+                    existing = prefs.getString("STUDENT_" + sId, "{}");
+                }
                 JSONObject json = new JSONObject(existing);
                 json.put("bookTitle", title);
                 json.put("returnDate", dateReturn);
@@ -165,7 +168,7 @@ public class LibraryActivity extends AppCompatActivity {
                 String jsonStr = json.toString();
 
                 String regNum = json.optString("regNumber", "");
-                SharedPreferences.Editor editor = prefs.edit().putString(sId, jsonStr);
+                SharedPreferences.Editor editor = prefs.edit().putString(sId, jsonStr).putString("STUDENT_" + sId, jsonStr);
                 if (!regNum.isEmpty()) {
                     editor.putString(regNum, jsonStr);
                 }

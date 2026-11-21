@@ -104,10 +104,13 @@ public class PaymentActivity extends AppCompatActivity {
             PaymentTransaction tx = new PaymentTransaction(studentId, phone, amount, txId, "confirmed");
             firebaseHelper.savePaymentTransaction(tx);
 
-            // update consolidated student profile in local preferences
+            // safely update consolidated student profile in local preferences
             try {
                 SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
-                String existing = prefs.getString(studentId, "{}");
+                String existing = prefs.getString(studentId, null);
+                if (existing == null) {
+                    existing = prefs.getString("STUDENT_" + studentId, "{}");
+                }
                 JSONObject json = new JSONObject(existing);
                 json.put("totalFee", totalFee);
                 json.put("amountPaid", amount);
@@ -118,7 +121,7 @@ public class PaymentActivity extends AppCompatActivity {
                 String jsonStr = json.toString();
 
                 String regNum = json.optString("regNumber", "");
-                SharedPreferences.Editor editor = prefs.edit().putString(studentId, jsonStr);
+                SharedPreferences.Editor editor = prefs.edit().putString(studentId, jsonStr).putString("STUDENT_" + studentId, jsonStr);
                 if (!regNum.isEmpty()) {
                     editor.putString(regNum, jsonStr);
                 }

@@ -49,7 +49,7 @@ public class RegistrationActivity extends AppCompatActivity {
         firebaseHelper = new FirebaseHelper();
         offlineSyncManager = new OfflineSyncManager(this);
 
-        // populate course dropdown list
+        // populate course dropdown list with usiu courses
         String[] courses = {
                 "Software Engineering",
                 "International Relations",
@@ -66,7 +66,7 @@ public class RegistrationActivity extends AppCompatActivity {
         courseAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerCourse.setAdapter(courseAdapter);
 
-        // populate department dropdown list
+        // populate department dropdown list with usiu departments
         String[] departments = {
                 "Business Administration",
                 "Finance & Accounting",
@@ -143,6 +143,7 @@ public class RegistrationActivity extends AppCompatActivity {
                 prefs.edit()
                         .putString(idNumber, jsonStr)
                         .putString(regNumber, jsonStr)
+                        .putString("STUDENT_" + idNumber, jsonStr)
                         .putString("LATEST_STUDENT_ID", idNumber)
                         .apply();
 

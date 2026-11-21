@@ -89,9 +89,12 @@ public class HostelActivity extends AppCompatActivity {
             HostelBooking booking = new HostelBooking(sId, location, roomType, isSharable);
             firebaseHelper.saveHostelBooking(booking);
 
-            // update consolidated profile in local cache
+            // safely merge into existing student profile in local cache without losing personal details
             try {
-                String existing = prefs.getString(sId, "{}");
+                String existing = prefs.getString(sId, null);
+                if (existing == null) {
+                    existing = prefs.getString("STUDENT_" + sId, "{}");
+                }
                 JSONObject json = new JSONObject(existing);
                 json.put("hostelLocation", location);
                 json.put("hostelRoomType", roomType);
@@ -99,7 +102,7 @@ public class HostelActivity extends AppCompatActivity {
                 String jsonStr = json.toString();
 
                 String regNum = json.optString("regNumber", "");
-                SharedPreferences.Editor editor = prefs.edit().putString(sId, jsonStr);
+                SharedPreferences.Editor editor = prefs.edit().putString(sId, jsonStr).putString("STUDENT_" + sId, jsonStr);
                 if (!regNum.isEmpty()) {
                     editor.putString(regNum, jsonStr);
                 }
