@@ -1,7 +1,9 @@
 package com.example.universityregistration.activities;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.InputType;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -10,7 +12,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.universityregistration.R;
 import com.example.universityregistration.models.PaymentTransaction;
 import com.example.universityregistration.database.FirebaseHelper;
-import com.example.universityregistration.utils.MpesaPaybill;
 
 public class PaymentActivity extends AppCompatActivity {
 
@@ -25,7 +26,7 @@ public class PaymentActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_payment);
 
-        // bind views from xml
+        // bind xml layout elements
         etPhoneNumber = findViewById(R.id.etPhoneNumber);
         etAmount = findViewById(R.id.etAmount);
         Button btnPayMpesa = findViewById(R.id.btnPayMpesa);
@@ -44,48 +45,61 @@ public class PaymentActivity extends AppCompatActivity {
             btnBack.setOnClickListener(v -> finish());
         }
 
-        // handle m-pesa payment button click
+        // handle m-pesa payment click
         btnPayMpesa.setOnClickListener(v -> {
             String phone = etPhoneNumber.getText().toString().trim();
             String amountStr = etAmount.getText().toString().trim();
 
-            // validate phone and amount
             if (phone.isEmpty() || amountStr.isEmpty()) {
                 Toast.makeText(this, "please enter phone number and fee amount", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             double amount = Double.parseDouble(amountStr);
-            Toast.makeText(this, "sending m-pesa stk push to " + phone + "...", Toast.LENGTH_SHORT).show();
-
-            // trigger m-pesa paybill simulation
-            MpesaPaybill.triggerStkPush(phone, amount, new MpesaPaybill.MpesaCallback() {
-                @Override
-                public void onSuccess(String transactionId) {
-                    tvPaymentStatus.setText("status: payment confirmed (m-pesa)");
-                    tvPaymentStatus.setTextColor(getResources().getColor(R.color.success_green));
-
-                    // save confirmed payment transaction to firebase
-                    PaymentTransaction tx = new PaymentTransaction(studentId, phone, amount, transactionId, "confirmed");
-                    firebaseHelper.savePaymentTransaction(tx);
-
-                    Toast.makeText(PaymentActivity.this, "m-pesa payment confirmed! registration status updated.", Toast.LENGTH_LONG).show();
-                }
-
-                @Override
-                public void onError(String message) {
-                    tvPaymentStatus.setText("status: payment failed");
-                    tvPaymentStatus.setTextColor(getResources().getColor(R.color.error_red));
-                    Toast.makeText(PaymentActivity.this, message, Toast.LENGTH_LONG).show();
-                }
-            });
+            showMpesaStkPushDialog(phone, amount);
         });
 
-        // navigate to summary reports activity
+        // handle view summary click
         btnViewSummary.setOnClickListener(v -> {
             Intent intent = new Intent(PaymentActivity.this, SummaryActivity.class);
             intent.putExtra("STUDENT_ID", studentId);
             startActivity(intent);
         });
+    }
+
+    // simple m-pesa stk push pop-up dialog
+    private void showMpesaStkPushDialog(String phone, double amount) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("m-pesa stk push");
+        builder.setMessage("pay kshs " + amount + " to usiu paybill 123456 for phone " + phone + "?\n\nenter m-pesa pin:");
+
+        final EditText etPin = new EditText(this);
+        etPin.setHint("m-pesa pin (4 digits)");
+        etPin.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        builder.setView(etPin);
+
+        builder.setPositiveButton("send", (dialog, which) -> {
+            String pin = etPin.getText().toString().trim();
+            if (pin.length() < 4) {
+                Toast.makeText(this, "invalid m-pesa pin. transaction cancelled.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            String txId = "mpesa_confirmed_" + System.currentTimeMillis();
+            tvPaymentStatus.setText("status: payment confirmed (m-pesa)");
+            tvPaymentStatus.setTextColor(getResources().getColor(R.color.success_green));
+
+            PaymentTransaction tx = new PaymentTransaction(studentId, phone, amount, txId, "confirmed");
+            firebaseHelper.savePaymentTransaction(tx);
+
+            Toast.makeText(this, "m-pesa payment confirmed! transaction id: " + txId, Toast.LENGTH_LONG).show();
+        });
+
+        builder.setNegativeButton("cancel", (dialog, which) -> {
+            dialog.dismiss();
+            Toast.makeText(this, "m-pesa payment cancelled", Toast.LENGTH_SHORT).show();
+        });
+
+        builder.show();
     }
 }
