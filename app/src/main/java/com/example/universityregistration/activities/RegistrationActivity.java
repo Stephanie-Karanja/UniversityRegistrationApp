@@ -17,7 +17,7 @@ import com.example.universityregistration.database.OfflineSyncManager;
 
 public class RegistrationActivity extends AppCompatActivity {
 
-    // UI elements for student registration
+    // ui elements for student registration
     private EditText etFullName, etIdNumber, etRegNumber;
     private RadioGroup rgGender;
     private Spinner spinnerCourse, spinnerDepartment;
@@ -43,19 +43,41 @@ public class RegistrationActivity extends AppCompatActivity {
         firebaseHelper = new FirebaseHelper();
         offlineSyncManager = new OfflineSyncManager(this);
 
-        // populate course dropdown list
-        String[] courses = {"BSc. Software Engineering", "BSc. Computer Science", "BSc. Information Technology", "BSc. Business Information Technology"};
+        // populate course dropdown list with usiu courses
+        String[] courses = {
+                "Software Engineering",
+                "International Relations",
+                "Psychology",
+                "Accounting",
+                "Finance",
+                "Data Science & Analytics",
+                "Artificial Intelligence & Robotics",
+                "International Business Administration",
+                "Journalism",
+                "Pharmacy"
+        };
         ArrayAdapter<String> courseAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, courses);
         courseAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerCourse.setAdapter(courseAdapter);
 
-        // populate department dropdown list
-        String[] departments = {"Computing & Informatics", "Business Administration", "Engineering", "Applied Sciences"};
+        // populate department dropdown list with usiu departments
+        String[] departments = {
+                "Business Administration",
+                "Finance & Accounting",
+                "Computer Science & Technology",
+                "Software Engineering",
+                "Data Science & Artificial Intelligence",
+                "Humanities & Social Sciences",
+                "International Relations",
+                "Communication & Journalism",
+                "Pharmacy & Health Sciences",
+                "Film, Animation & Creative Arts"
+        };
         ArrayAdapter<String> deptAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, departments);
         deptAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerDepartment.setAdapter(deptAdapter);
 
-        // handle back button click to return to previous screen
+        // handle back button click
         if (btnBack != null) {
             btnBack.setOnClickListener(v -> finish());
         }
