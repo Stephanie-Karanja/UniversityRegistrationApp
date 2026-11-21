@@ -51,7 +51,7 @@ public class OfflineSyncManager {
         }
     }
 
-    // sync pending offline cached data to firebase
+    // sync pending offline cached data to firebase while preserving local records for reports
     public void syncPendingData() {
         if (!isNetworkAvailable()) return;
 
@@ -62,7 +62,7 @@ public class OfflineSyncManager {
         for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
             try {
                 Object val = entry.getValue();
-                if (val instanceof String) {
+                if (val instanceof String && ((String) val).startsWith("{")) {
                     syncMap.put(entry.getKey(), (String) val);
                 }
             } catch (Exception e) {
@@ -72,8 +72,7 @@ public class OfflineSyncManager {
 
         if (!syncMap.isEmpty()) {
             firebaseHelper.syncCachedData(syncMap);
-            sharedPreferences.edit().clear().apply();
-            Log.d(TAG, "pending offline data synced to firebase.");
+            Log.d(TAG, "pending offline data synced to firebase while preserving local reporting cache.");
         }
     }
 

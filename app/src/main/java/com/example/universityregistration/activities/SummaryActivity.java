@@ -83,15 +83,14 @@ public class SummaryActivity extends AppCompatActivity {
     // display neat formatted individual summary for a student
     private void loadIndividualSummary(String searchKey) {
         SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
-        String studentData = prefs.getString(searchKey, null);
+        JSONObject json = findStudentJsonRecord(prefs, searchKey);
 
-        if (studentData == null || studentData.isEmpty()) {
-            tvSummaryContent.setText(Html.fromHtml("<b><font color='#E53E3E'>no student registration record found for search query: " + searchKey + "</font></b><br/><br/>please enter a valid student id or registration number.<br/><br/><center><font color='#718096'><i>USIU Africa - Education to take you places</i></font></center>", Html.FROM_HTML_MODE_LEGACY));
+        if (json == null) {
+            tvSummaryContent.setText(Html.fromHtml("<b><font color='#E53E3E'>no student registration record found for search query: " + searchKey + "</font></b><br/><br/>please register a student first or enter a valid student id / reg number.<br/><br/><center><font color='#718096'><i>USIU Africa - Education to take you places</i></font></center>", Html.FROM_HTML_MODE_LEGACY));
             return;
         }
 
         try {
-            JSONObject json = new JSONObject(studentData);
             String fullName = json.optString("fullName", "N/A");
             String idNumber = json.optString("idNumber", searchKey);
             String regNumber = json.optString("regNumber", "N/A");
@@ -151,17 +150,17 @@ public class SummaryActivity extends AppCompatActivity {
             if ("LATEST_STUDENT_ID".equals(entry.getKey())) continue;
             try {
                 Object val = entry.getValue();
-                if (!(val instanceof String)) continue;
+                if (!(val instanceof String) || !((String) val).startsWith("{")) continue;
 
                 JSONObject json = new JSONObject((String) val);
                 String idNum = json.optString("idNumber", "");
-                if (idNum.isEmpty() || processedStudentIds.contains(idNum)) {
+                String fullName = json.optString("fullName", "");
+                if (idNum.isEmpty() || fullName.isEmpty() || processedStudentIds.contains(idNum)) {
                     continue;
                 }
                 processedStudentIds.add(idNum);
                 count++;
 
-                String name = json.optString("fullName", "Student");
                 String reg = json.optString("regNumber", "N/A");
                 String crs = json.optString("course", "N/A");
                 String dept = json.optString("department", "N/A");
@@ -173,7 +172,7 @@ public class SummaryActivity extends AppCompatActivity {
                 double bal = Math.max(0.0, total - paid);
 
                 sb.append("<tr>")
-                        .append("<td>").append(name).append("<br/><b>").append(reg).append("</b></td>")
+                        .append("<td>").append(fullName).append("<br/><b>").append(reg).append("</b></td>")
                         .append("<td>").append(crs).append("<br/><i>").append(dept).append("</i></td>")
                         .append("<td>").append(book).append("<br/>Due: ").append(ret).append("</td>")
                         .append("<td>").append(hstl).append("</td>")
@@ -193,6 +192,43 @@ public class SummaryActivity extends AppCompatActivity {
         sb.append("<center><font color='#718096'><i>USIU Africa - Education to take you places</i></font></center>");
 
         tvSummaryContent.setText(Html.fromHtml(sb.toString(), Html.FROM_HTML_MODE_LEGACY));
+    }
+
+    // find student record json matching ID or Reg Number from local preferences
+    private JSONObject findStudentJsonRecord(SharedPreferences prefs, String query) {
+        if (query == null || query.trim().isEmpty()) return null;
+
+        String jsonStr = prefs.getString(query, null);
+        if (jsonStr == null) {
+            jsonStr = prefs.getString("STUDENT_" + query, null);
+        }
+        if (jsonStr == null) {
+            Map<String, ?> all = prefs.getAll();
+            for (Map.Entry<String, ?> entry : all.entrySet()) {
+                if (entry.getValue() instanceof String) {
+                    String str = (String) entry.getValue();
+                    if (str.startsWith("{") && (str.contains("\"idNumber\":\"" + query) || str.contains("\"regNumber\":\"" + query))) {
+                        jsonStr = str;
+                        break;
+                    }
+                }
+            }
+        }
+        if (jsonStr == null) {
+            String latestId = prefs.getString("LATEST_STUDENT_ID", "");
+            if (!latestId.isEmpty()) {
+                jsonStr = prefs.getString(latestId, null);
+            }
+        }
+
+        try {
+            if (jsonStr != null && jsonStr.startsWith("{")) {
+                return new JSONObject(jsonStr);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "error finding student record: " + e.getMessage());
+        }
+        return null;
     }
 
     // print report or export to pdf
