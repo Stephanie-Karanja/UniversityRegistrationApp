@@ -2,12 +2,18 @@ package com.example.universityregistration.activities;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.print.PrintManager;
 import android.text.Html;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
+import android.widget.TableLayout;
+import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -27,6 +33,8 @@ public class SummaryActivity extends AppCompatActivity {
     // ui elements for summary reporting and printing
     private EditText etSearchStudentId;
     private TextView tvSummaryContent;
+    private HorizontalScrollView scrollTableContainer;
+    private TableLayout tableAllStudents;
     private OfflineSyncManager offlineSyncManager;
 
     @Override
@@ -41,6 +49,8 @@ public class SummaryActivity extends AppCompatActivity {
         Button btnPrintReport = findViewById(R.id.btnPrintReport);
         Button btnBack = findViewById(R.id.btnBack);
         tvSummaryContent = findViewById(R.id.tvSummaryContent);
+        scrollTableContainer = findViewById(R.id.scrollTableContainer);
+        tableAllStudents = findViewById(R.id.tableAllStudents);
 
         offlineSyncManager = new OfflineSyncManager(this);
 
@@ -73,7 +83,7 @@ public class SummaryActivity extends AppCompatActivity {
             loadIndividualSummary(studentId);
         });
 
-        // handle view all registered students button click (table view)
+        // handle view all registered students button click (visual grid table)
         btnViewAll.setOnClickListener(v -> loadAllStudentsSummaryTable());
 
         // handle print / pdf export button click
@@ -82,6 +92,9 @@ public class SummaryActivity extends AppCompatActivity {
 
     // display neat formatted individual summary for a student
     private void loadIndividualSummary(String searchKey) {
+        tvSummaryContent.setVisibility(View.VISIBLE);
+        scrollTableContainer.setVisibility(View.GONE);
+
         SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
         JSONObject json = findStudentJsonRecord(prefs, searchKey);
 
@@ -133,16 +146,32 @@ public class SummaryActivity extends AppCompatActivity {
         }
     }
 
-    // display tabular summary for all registered students
+    // display visual grid table for all registered students
     private void loadAllStudentsSummaryTable() {
+        tvSummaryContent.setVisibility(View.GONE);
+        scrollTableContainer.setVisibility(View.VISIBLE);
+        tableAllStudents.removeAllViews();
+
+        // 1. add table header row
+        TableRow headerRow = new TableRow(this);
+        headerRow.setBackgroundColor(getResources().getColor(R.color.primary_blue));
+        headerRow.setPadding(12, 12, 12, 12);
+
+        String[] headers = {"Student Name & Reg No", "Course & Department", "Library Book Details", "Hostel Booking", "Fee Paid / Balance"};
+        for (String headerText : headers) {
+            TextView tv = new TextView(this);
+            tv.setText(headerText);
+            tv.setTextColor(getResources().getColor(R.color.card_white));
+            tv.setTypeface(null, Typeface.BOLD);
+            tv.setTextSize(13f);
+            tv.setPadding(16, 12, 16, 12);
+            headerRow.addView(tv);
+        }
+        tableAllStudents.addView(headerRow);
+
+        // 2. populate student rows from shared preferences
         SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
         Map<String, ?> allEntries = prefs.getAll();
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("<center><b>ALL REGISTERED STUDENTS REPORT (2026 COHORT)</b></center><br/>");
-        sb.append("<table border='1' width='100%' style='border-collapse:collapse;'>");
-        sb.append("<tr bgcolor='#1A365D'><th><font color='#FFFFFF'>Name / Reg No</font></th><th><font color='#FFFFFF'>Course & Dept</font></th><th><font color='#FFFFFF'>Library Book</font></th><th><font color='#FFFFFF'>Hostel</font></th><th><font color='#FFFFFF'>Paid / Balance</font></th></tr>");
-
         Set<String> processedStudentIds = new HashSet<>();
         int count = 0;
 
@@ -161,6 +190,14 @@ public class SummaryActivity extends AppCompatActivity {
                 processedStudentIds.add(idNum);
                 count++;
 
+                TableRow row = new TableRow(this);
+                if (count % 2 == 0) {
+                    row.setBackgroundColor(Color.parseColor("#F7FAFC"));
+                } else {
+                    row.setBackgroundColor(Color.parseColor("#FFFFFF"));
+                }
+                row.setPadding(8, 8, 8, 8);
+
                 String reg = json.optString("regNumber", "N/A");
                 String crs = json.optString("course", "N/A");
                 String dept = json.optString("department", "N/A");
@@ -171,27 +208,40 @@ public class SummaryActivity extends AppCompatActivity {
                 double total = json.optDouble("totalFee", 180000.0);
                 double bal = Math.max(0.0, total - paid);
 
-                sb.append("<tr>")
-                        .append("<td>").append(fullName).append("<br/><b>").append(reg).append("</b></td>")
-                        .append("<td>").append(crs).append("<br/><i>").append(dept).append("</i></td>")
-                        .append("<td>").append(book).append("<br/>Due: ").append(ret).append("</td>")
-                        .append("<td>").append(hstl).append("</td>")
-                        .append("<td>Paid: Kshs ").append(String.format(Locale.US, "%.2f", paid)).append("<br/>Bal: Kshs ").append(String.format(Locale.US, "%.2f", bal)).append("</td>")
-                        .append("</tr>");
+                addTableCell(row, fullName + "\n" + reg, true);
+                addTableCell(row, crs + "\n(" + dept + ")", false);
+                addTableCell(row, book + "\nDue: " + ret, false);
+                addTableCell(row, hstl, false);
+                addTableCell(row, "Paid: Kshs " + String.format(Locale.US, "%.2f", paid) + "\nBal: Kshs " + String.format(Locale.US, "%.2f", bal), false);
+
+                tableAllStudents.addView(row);
             } catch (Exception e) {
                 Log.e(TAG, "error parsing student record for table: " + e.getMessage());
             }
         }
 
         if (count == 0) {
-            sb.append("<tr><td colspan='5' align='center'><i>no registered students found in database.</i></td></tr>");
+            TableRow emptyRow = new TableRow(this);
+            TextView tvEmpty = new TextView(this);
+            tvEmpty.setText("no registered students found in database.");
+            tvEmpty.setTextColor(getResources().getColor(R.color.text_muted));
+            tvEmpty.setPadding(24, 24, 24, 24);
+            emptyRow.addView(tvEmpty);
+            tableAllStudents.addView(emptyRow);
         }
+    }
 
-        sb.append("</table><br/>");
-        sb.append("<b>Sync Status:</b> ").append(offlineSyncManager.isNetworkAvailable() ? "<font color='#38A169'>Online (Synced to Cloud)</font>" : "<font color='#E53E3E'>Offline (Cached Locally)</font>").append("<br/><br/>");
-        sb.append("<center><font color='#718096'><i>USIU Africa - Education to take you places</i></font></center>");
-
-        tvSummaryContent.setText(Html.fromHtml(sb.toString(), Html.FROM_HTML_MODE_LEGACY));
+    // helper method to add text cells to table rows
+    private void addTableCell(TableRow row, String text, boolean isBold) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextColor(getResources().getColor(R.color.text_dark));
+        tv.setTextSize(12f);
+        if (isBold) {
+            tv.setTypeface(null, Typeface.BOLD);
+        }
+        tv.setPadding(16, 12, 16, 12);
+        row.addView(tv);
     }
 
     // find student record json matching ID or Reg Number from local preferences
