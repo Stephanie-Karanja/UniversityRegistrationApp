@@ -75,7 +75,7 @@
             android:id="@+id/btnViewAll"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="View All Registered Students"
+            android:text="View All Registered Students (Table)"
             android:backgroundTint="@color/primary_blue"
             android:textColor="@color/card_white"
             android:layout_marginBottom="16dp" />
@@ -133,7 +133,20 @@
             android:layout_height="wrap_content"
             android:text="Back"
             android:backgroundTint="@color/text_muted"
-            android:textColor="@color/card_white" />
+            android:textColor="@color/card_white"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Centered Tagline in Grey Font -->
+        <TextView
+            android:id="@+id/tvFooterTagline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="USIU Africa - Education to take you places"
+            android:textColor="@color/text_muted"
+            android:textSize="14sp"
+            android:textStyle="italic"
+            android:gravity="center"
+            android:layout_marginBottom="16dp" />
 
     </LinearLayout>
 </ScrollView>

@@ -1,6 +1,8 @@
 package com.example.universityregistration.activities;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -11,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.universityregistration.R;
 import com.example.universityregistration.models.HostelBooking;
 import com.example.universityregistration.database.FirebaseHelper;
+import org.json.JSONObject;
 
 public class HostelActivity extends AppCompatActivity {
 
@@ -79,6 +82,19 @@ public class HostelActivity extends AppCompatActivity {
             // create hostel booking object and save to firebase
             HostelBooking booking = new HostelBooking(sId, location, roomType, isSharable);
             firebaseHelper.saveHostelBooking(booking);
+
+            // update consolidated profile in local cache
+            try {
+                SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
+                String existing = prefs.getString(sId, "{}");
+                JSONObject json = new JSONObject(existing);
+                json.put("hostelLocation", location);
+                json.put("hostelRoomType", roomType);
+                json.put("isSharable", isSharable ? "sharable" : "non-sharable");
+                prefs.edit().putString(sId, json.toString()).apply();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
             Toast.makeText(this, "hostel accommodation booking saved successfully!", Toast.LENGTH_SHORT).show();
 

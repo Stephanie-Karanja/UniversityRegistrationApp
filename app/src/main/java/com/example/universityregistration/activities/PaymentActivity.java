@@ -1,7 +1,9 @@
 package com.example.universityregistration.activities;
 
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.InputType;
 import android.widget.Button;
@@ -12,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.universityregistration.R;
 import com.example.universityregistration.models.PaymentTransaction;
 import com.example.universityregistration.database.FirebaseHelper;
+import org.json.JSONObject;
 
 public class PaymentActivity extends AppCompatActivity {
 
@@ -89,10 +92,31 @@ public class PaymentActivity extends AppCompatActivity {
             tvPaymentStatus.setText("status: payment confirmed (m-pesa)");
             tvPaymentStatus.setTextColor(getResources().getColor(R.color.success_green));
 
+            // calculate dynamic fee balance based on actual amount paid
+            double totalFee = 180000.0;
+            double feeBalance = Math.max(0.0, totalFee - amount);
+
+            // save payment transaction to firebase
             PaymentTransaction tx = new PaymentTransaction(studentId, phone, amount, txId, "confirmed");
             firebaseHelper.savePaymentTransaction(tx);
 
-            Toast.makeText(this, "m-pesa payment confirmed! transaction id: " + txId, Toast.LENGTH_LONG).show();
+            // update consolidated student profile in local preferences
+            try {
+                SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
+                String existing = prefs.getString(studentId, "{}");
+                JSONObject json = new JSONObject(existing);
+                json.put("totalFee", totalFee);
+                json.put("amountPaid", amount);
+                json.put("feeBalance", feeBalance);
+                json.put("paymentMethod", "M-PESA");
+                json.put("paymentStatus", "Confirmed");
+                json.put("phoneNumber", phone);
+                prefs.edit().putString(studentId, json.toString()).apply();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            Toast.makeText(this, "m-pesa payment confirmed! fee balance: kshs " + feeBalance, Toast.LENGTH_LONG).show();
         });
 
         builder.setNegativeButton("cancel", (dialog, which) -> {

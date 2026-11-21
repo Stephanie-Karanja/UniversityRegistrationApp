@@ -1,6 +1,8 @@
 package com.example.universityregistration.activities;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -14,6 +16,7 @@ import com.example.universityregistration.R;
 import com.example.universityregistration.models.Student;
 import com.example.universityregistration.database.FirebaseHelper;
 import com.example.universityregistration.database.OfflineSyncManager;
+import org.json.JSONObject;
 
 public class RegistrationActivity extends AppCompatActivity {
 
@@ -43,7 +46,7 @@ public class RegistrationActivity extends AppCompatActivity {
         firebaseHelper = new FirebaseHelper();
         offlineSyncManager = new OfflineSyncManager(this);
 
-        // populate course dropdown list with usiu courses
+        // populate course dropdown list
         String[] courses = {
                 "Software Engineering",
                 "International Relations",
@@ -60,7 +63,7 @@ public class RegistrationActivity extends AppCompatActivity {
         courseAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerCourse.setAdapter(courseAdapter);
 
-        // populate department dropdown list with usiu departments
+        // populate department dropdown list
         String[] departments = {
                 "Business Administration",
                 "Finance & Accounting",
@@ -110,9 +113,33 @@ public class RegistrationActivity extends AppCompatActivity {
             // create student model object
             Student student = new Student(fullName, idNumber, regNumber, gender, course, department);
 
-            // save data to firebase and local cache
+            // save data to firebase
             firebaseHelper.saveStudentRegistration(student);
-            offlineSyncManager.cacheDataLocally(idNumber, fullName + " | reg: " + regNumber + " | course: " + course);
+
+            // save consolidated student profile to local shared preferences
+            try {
+                SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
+                JSONObject json = new JSONObject();
+                json.put("fullName", fullName);
+                json.put("idNumber", idNumber);
+                json.put("regNumber", regNumber);
+                json.put("gender", gender);
+                json.put("course", course);
+                json.put("department", department);
+                json.put("totalFee", 180000.0);
+                json.put("amountPaid", 0.0);
+                json.put("feeBalance", 180000.0);
+                json.put("paymentMethod", "pending");
+                json.put("paymentStatus", "pending");
+                json.put("bookTitle", "none requested");
+                json.put("returnDate", "n/a");
+                json.put("hostelLocation", "none booked");
+                json.put("hostelRoomType", "n/a");
+                prefs.edit().putString(idNumber, json.toString()).apply();
+                offlineSyncManager.cacheDataLocally(idNumber, json.toString());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
             Toast.makeText(this, "student registered successfully!", Toast.LENGTH_SHORT).show();
 
