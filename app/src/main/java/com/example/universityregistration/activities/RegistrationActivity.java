@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -19,6 +20,8 @@ import com.example.universityregistration.database.OfflineSyncManager;
 import org.json.JSONObject;
 
 public class RegistrationActivity extends AppCompatActivity {
+
+    private static final String TAG = "RegistrationActivity";
 
     // ui elements for student registration
     private EditText etFullName, etIdNumber, etRegNumber;
@@ -116,7 +119,7 @@ public class RegistrationActivity extends AppCompatActivity {
             // save data to firebase
             firebaseHelper.saveStudentRegistration(student);
 
-            // save consolidated student profile to local shared preferences
+            // save consolidated student profile to local shared preferences under ID and Reg Number
             try {
                 SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
                 JSONObject json = new JSONObject();
@@ -135,10 +138,17 @@ public class RegistrationActivity extends AppCompatActivity {
                 json.put("returnDate", "n/a");
                 json.put("hostelLocation", "none booked");
                 json.put("hostelRoomType", "n/a");
-                prefs.edit().putString(idNumber, json.toString()).apply();
-                offlineSyncManager.cacheDataLocally(idNumber, json.toString());
+
+                String jsonStr = json.toString();
+                prefs.edit()
+                        .putString(idNumber, jsonStr)
+                        .putString(regNumber, jsonStr)
+                        .putString("LATEST_STUDENT_ID", idNumber)
+                        .apply();
+
+                offlineSyncManager.cacheDataLocally(idNumber, jsonStr);
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e(TAG, "error saving student registration to local prefs: " + e.getMessage());
             }
 
             Toast.makeText(this, "student registered successfully!", Toast.LENGTH_SHORT).show();

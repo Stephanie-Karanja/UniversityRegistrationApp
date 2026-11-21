@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.print.PrintManager;
 import android.text.Html;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -14,9 +15,14 @@ import com.example.universityregistration.R;
 import com.example.universityregistration.database.OfflineSyncManager;
 import com.example.universityregistration.utils.PDFPrintAdapter;
 import org.json.JSONObject;
+import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public class SummaryActivity extends AppCompatActivity {
+
+    private static final String TAG = "SummaryActivity";
 
     // ui elements for summary reporting and printing
     private EditText etSearchStudentId;
@@ -38,11 +44,18 @@ public class SummaryActivity extends AppCompatActivity {
 
         offlineSyncManager = new OfflineSyncManager(this);
 
-        // load student id if passed via intent
+        // load student id if passed via intent or latest registered student
+        SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
         String passedId = getIntent().getStringExtra("STUDENT_ID");
-        if (passedId != null && !passedId.isEmpty()) {
+        if (passedId == null || passedId.isEmpty()) {
+            passedId = prefs.getString("LATEST_STUDENT_ID", "");
+        }
+
+        if (!passedId.isEmpty()) {
             etSearchStudentId.setText(passedId);
             loadIndividualSummary(passedId);
+        } else {
+            loadAllStudentsSummaryTable();
         }
 
         // handle back button click
@@ -68,66 +81,57 @@ public class SummaryActivity extends AppCompatActivity {
     }
 
     // display neat formatted individual summary for a student
-    private void loadIndividualSummary(String studentId) {
+    private void loadIndividualSummary(String searchKey) {
         SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
-        String studentData = prefs.getString(studentId, null);
+        String studentData = prefs.getString(searchKey, null);
 
-        String fullName = "Stephanie Karanja";
-        String regNumber = "SCT221-005/2026";
-        String course = "Software Engineering";
-        String department = "Software Engineering";
-        String bookTitle = "Introduction to Algorithms";
-        String returnDate = "15/12/2026";
-        String hostelLocation = "Phase 2 Hostel";
-        String roomType = "1 Bedroom";
-        double totalFee = 180000.0;
-        double amountPaid = 1.0;
-        double feeBalance = 179999.0;
-        String paymentMethod = "M-PESA";
-        String paymentStatus = "Confirmed";
-
-        if (studentData != null) {
-            try {
-                JSONObject json = new JSONObject(studentData);
-                fullName = json.optString("fullName", fullName);
-                regNumber = json.optString("regNumber", regNumber);
-                course = json.optString("course", course);
-                department = json.optString("department", department);
-                bookTitle = json.optString("bookTitle", bookTitle);
-                returnDate = json.optString("returnDate", returnDate);
-                hostelLocation = json.optString("hostelLocation", hostelLocation);
-                roomType = json.optString("hostelRoomType", roomType);
-                totalFee = json.optDouble("totalFee", 180000.0);
-                amountPaid = json.optDouble("amountPaid", 1.0);
-                feeBalance = Math.max(0.0, totalFee - amountPaid);
-                paymentMethod = json.optString("paymentMethod", "M-PESA");
-                paymentStatus = json.optString("paymentStatus", "Confirmed");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        if (studentData == null || studentData.isEmpty()) {
+            tvSummaryContent.setText(Html.fromHtml("<b><font color='#E53E3E'>no student registration record found for search query: " + searchKey + "</font></b><br/><br/>please enter a valid student id or registration number.<br/><br/><center><font color='#718096'><i>USIU Africa - Education to take you places</i></font></center>", Html.FROM_HTML_MODE_LEGACY));
+            return;
         }
 
-        String htmlReport = "<b>STUDENT REGISTRATION SUMMARY REPORT</b><br/><br/>" +
-                "<b>1. Personal Details:</b><br/>" +
-                "&nbsp;&nbsp;&bull; Full Name: <b>" + fullName + "</b><br/>" +
-                "&nbsp;&nbsp;&bull; ID Number: " + studentId + "<br/>" +
-                "&nbsp;&nbsp;&bull; Reg Number: <b>" + regNumber + "</b><br/>" +
-                "&nbsp;&nbsp;&bull; Course: " + course + "<br/>" +
-                "&nbsp;&nbsp;&bull; Department: " + department + "<br/><br/>" +
-                "<b>2. Library Book Details:</b><br/>" +
-                "&nbsp;&nbsp;&bull; Book Title: " + bookTitle + "<br/>" +
-                "&nbsp;&nbsp;&bull; Date of Return: <b>" + returnDate + "</b><br/><br/>" +
-                "<b>3. Accommodation Details:</b><br/>" +
-                "&nbsp;&nbsp;&bull; Hostel Location: " + hostelLocation + "<br/>" +
-                "&nbsp;&nbsp;&bull; Room Type: " + roomType + "<br/><br/>" +
-                "<b>4. Fee Payment Details:</b><br/>" +
-                "&nbsp;&nbsp;&bull; Total Course Fee: <b>Kshs " + String.format("%.2f", totalFee) + "/-</b><br/>" +
-                "&nbsp;&nbsp;&bull; Amount Paid (" + paymentMethod + "): <b>Kshs " + String.format("%.2f", amountPaid) + "/-</b><br/>" +
-                "&nbsp;&nbsp;&bull; Fee Balance: <font color='#E53E3E'><b>Kshs " + String.format("%.2f", feeBalance) + "/-</b></font><br/>" +
-                "&nbsp;&nbsp;&bull; Status: <font color='#38A169'><b>" + paymentStatus + "</b></font><br/><br/>" +
-                "<center><font color='#718096'><i>USIU Africa - Education to take you places</i></font></center>";
+        try {
+            JSONObject json = new JSONObject(studentData);
+            String fullName = json.optString("fullName", "N/A");
+            String idNumber = json.optString("idNumber", searchKey);
+            String regNumber = json.optString("regNumber", "N/A");
+            String course = json.optString("course", "N/A");
+            String department = json.optString("department", "N/A");
+            String bookTitle = json.optString("bookTitle", "none requested");
+            String returnDate = json.optString("returnDate", "n/a");
+            String hostelLocation = json.optString("hostelLocation", "none booked");
+            String roomType = json.optString("hostelRoomType", "n/a");
+            double totalFee = json.optDouble("totalFee", 180000.0);
+            double amountPaid = json.optDouble("amountPaid", 0.0);
+            double feeBalance = Math.max(0.0, totalFee - amountPaid);
+            String paymentMethod = json.optString("paymentMethod", "pending");
+            String paymentStatus = json.optString("paymentStatus", "pending");
 
-        tvSummaryContent.setText(Html.fromHtml(htmlReport, Html.FROM_HTML_MODE_LEGACY));
+            String htmlReport = "<b>STUDENT REGISTRATION SUMMARY REPORT</b><br/><br/>" +
+                    "<b>1. Personal Details:</b><br/>" +
+                    "&nbsp;&nbsp;&bull; Full Name: <b>" + fullName + "</b><br/>" +
+                    "&nbsp;&nbsp;&bull; ID Number: " + idNumber + "<br/>" +
+                    "&nbsp;&nbsp;&bull; Reg Number: <b>" + regNumber + "</b><br/>" +
+                    "&nbsp;&nbsp;&bull; Course: " + course + "<br/>" +
+                    "&nbsp;&nbsp;&bull; Department: " + department + "<br/><br/>" +
+                    "<b>2. Library Book Details:</b><br/>" +
+                    "&nbsp;&nbsp;&bull; Book Title: " + bookTitle + "<br/>" +
+                    "&nbsp;&nbsp;&bull; Date of Return: <b>" + returnDate + "</b><br/><br/>" +
+                    "<b>3. Accommodation Details:</b><br/>" +
+                    "&nbsp;&nbsp;&bull; Hostel Location: " + hostelLocation + "<br/>" +
+                    "&nbsp;&nbsp;&bull; Room Type: " + roomType + "<br/><br/>" +
+                    "<b>4. Fee Payment Details:</b><br/>" +
+                    "&nbsp;&nbsp;&bull; Total Course Fee: <b>Kshs " + String.format(Locale.US, "%.2f", totalFee) + "/-</b><br/>" +
+                    "&nbsp;&nbsp;&bull; Amount Paid (" + paymentMethod + "): <b>Kshs " + String.format(Locale.US, "%.2f", amountPaid) + "/-</b><br/>" +
+                    "&nbsp;&nbsp;&bull; Fee Balance: <font color='#E53E3E'><b>Kshs " + String.format(Locale.US, "%.2f", feeBalance) + "/-</b></font><br/>" +
+                    "&nbsp;&nbsp;&bull; Status: <font color='#38A169'><b>" + paymentStatus + "</b></font><br/><br/>" +
+                    "<center><font color='#718096'><i>USIU Africa - Education to take you places</i></font></center>";
+
+            tvSummaryContent.setText(Html.fromHtml(htmlReport, Html.FROM_HTML_MODE_LEGACY));
+        } catch (Exception e) {
+            Log.e(TAG, "error parsing student json summary: " + e.getMessage());
+            tvSummaryContent.setText("error displaying student record details.");
+        }
     }
 
     // display tabular summary for all registered students
@@ -140,33 +144,48 @@ public class SummaryActivity extends AppCompatActivity {
         sb.append("<table border='1' width='100%' style='border-collapse:collapse;'>");
         sb.append("<tr bgcolor='#1A365D'><th><font color='#FFFFFF'>Name / Reg No</font></th><th><font color='#FFFFFF'>Course & Dept</font></th><th><font color='#FFFFFF'>Library Book</font></th><th><font color='#FFFFFF'>Hostel</font></th><th><font color='#FFFFFF'>Paid / Balance</font></th></tr>");
 
-        if (allEntries.isEmpty()) {
-            sb.append("<tr><td>Stephanie Karanja<br/>SCT221-005/2026</td><td>Software Eng<br/>Computing</td><td>Intro to Algorithms<br/>Return: 15/12/2026</td><td>Phase 2<br/>1 Bedroom</td><td>Paid: Kshs 1.00<br/>Bal: Kshs 179,999.00</td></tr>");
-        } else {
-            for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
-                try {
-                    JSONObject json = new JSONObject((String) entry.getValue());
-                    String name = json.optString("fullName", "Student");
-                    String reg = json.optString("regNumber", "N/A");
-                    String crs = json.optString("course", "N/A");
-                    String dept = json.optString("department", "N/A");
-                    String book = json.optString("bookTitle", "None");
-                    String ret = json.optString("returnDate", "N/A");
-                    String hstl = json.optString("hostelLocation", "None");
-                    double paid = json.optDouble("amountPaid", 1.0);
-                    double bal = Math.max(0.0, 180000.0 - paid);
+        Set<String> processedStudentIds = new HashSet<>();
+        int count = 0;
 
-                    sb.append("<tr>")
-                            .append("<td>").append(name).append("<br/><b>").append(reg).append("</b></td>")
-                            .append("<td>").append(crs).append("<br/><i>").append(dept).append("</i></td>")
-                            .append("<td>").append(book).append("<br/>Due: ").append(ret).append("</td>")
-                            .append("<td>").append(hstl).append("</td>")
-                            .append("<td>Paid: Kshs ").append(String.format("%.2f", paid)).append("<br/>Bal: Kshs ").append(String.format("%.2f", bal)).append("</td>")
-                            .append("</tr>");
-                } catch (Exception e) {
-                    e.printStackTrace();
+        for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
+            if ("LATEST_STUDENT_ID".equals(entry.getKey())) continue;
+            try {
+                Object val = entry.getValue();
+                if (!(val instanceof String)) continue;
+
+                JSONObject json = new JSONObject((String) val);
+                String idNum = json.optString("idNumber", "");
+                if (idNum.isEmpty() || processedStudentIds.contains(idNum)) {
+                    continue;
                 }
+                processedStudentIds.add(idNum);
+                count++;
+
+                String name = json.optString("fullName", "Student");
+                String reg = json.optString("regNumber", "N/A");
+                String crs = json.optString("course", "N/A");
+                String dept = json.optString("department", "N/A");
+                String book = json.optString("bookTitle", "None");
+                String ret = json.optString("returnDate", "N/A");
+                String hstl = json.optString("hostelLocation", "None");
+                double paid = json.optDouble("amountPaid", 0.0);
+                double total = json.optDouble("totalFee", 180000.0);
+                double bal = Math.max(0.0, total - paid);
+
+                sb.append("<tr>")
+                        .append("<td>").append(name).append("<br/><b>").append(reg).append("</b></td>")
+                        .append("<td>").append(crs).append("<br/><i>").append(dept).append("</i></td>")
+                        .append("<td>").append(book).append("<br/>Due: ").append(ret).append("</td>")
+                        .append("<td>").append(hstl).append("</td>")
+                        .append("<td>Paid: Kshs ").append(String.format(Locale.US, "%.2f", paid)).append("<br/>Bal: Kshs ").append(String.format(Locale.US, "%.2f", bal)).append("</td>")
+                        .append("</tr>");
+            } catch (Exception e) {
+                Log.e(TAG, "error parsing student record for table: " + e.getMessage());
             }
+        }
+
+        if (count == 0) {
+            sb.append("<tr><td colspan='5' align='center'><i>no registered students found in database.</i></td></tr>");
         }
 
         sb.append("</table><br/>");

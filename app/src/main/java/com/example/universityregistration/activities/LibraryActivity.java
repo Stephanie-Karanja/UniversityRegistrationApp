@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -16,6 +17,8 @@ import com.example.universityregistration.database.FirebaseHelper;
 import org.json.JSONObject;
 
 public class LibraryActivity extends AppCompatActivity {
+
+    private static final String TAG = "LibraryActivity";
 
     // ui views for library book request
     private EditText etStudentId;
@@ -39,9 +42,12 @@ public class LibraryActivity extends AppCompatActivity {
 
         firebaseHelper = new FirebaseHelper();
 
-        // pre-fill student id if passed from previous activity
+        SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
         String studentId = getIntent().getStringExtra("STUDENT_ID");
-        if (studentId != null) {
+        if (studentId == null || studentId.isEmpty()) {
+            studentId = prefs.getString("LATEST_STUDENT_ID", "");
+        }
+        if (!studentId.isEmpty()) {
             etStudentId.setText(studentId);
         }
 
@@ -101,16 +107,22 @@ public class LibraryActivity extends AppCompatActivity {
 
             // update consolidated profile in local cache
             try {
-                SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
                 String existing = prefs.getString(sId, "{}");
                 JSONObject json = new JSONObject(existing);
                 json.put("bookTitle", title);
                 json.put("returnDate", dateReturn);
                 json.put("bookIsbn", isbn);
                 json.put("bookAuthor", author);
-                prefs.edit().putString(sId, json.toString()).apply();
+                String jsonStr = json.toString();
+
+                String regNum = json.optString("regNumber", "");
+                SharedPreferences.Editor editor = prefs.edit().putString(sId, jsonStr);
+                if (!regNum.isEmpty()) {
+                    editor.putString(regNum, jsonStr);
+                }
+                editor.apply();
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e(TAG, "error saving library request to local prefs: " + e.getMessage());
             }
 
             Toast.makeText(this, "library book request submitted successfully!", Toast.LENGTH_SHORT).show();

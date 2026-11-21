@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.InputType;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -17,6 +18,8 @@ import com.example.universityregistration.database.FirebaseHelper;
 import org.json.JSONObject;
 
 public class PaymentActivity extends AppCompatActivity {
+
+    private static final String TAG = "PaymentActivity";
 
     // ui views for m-pesa payment
     private EditText etPhoneNumber, etAmount;
@@ -38,9 +41,10 @@ public class PaymentActivity extends AppCompatActivity {
         tvPaymentStatus = findViewById(R.id.tvPaymentStatus);
 
         firebaseHelper = new FirebaseHelper();
+        SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
         studentId = getIntent().getStringExtra("STUDENT_ID");
-        if (studentId == null) {
-            studentId = "674735"; // default student id fallback
+        if (studentId == null || studentId.isEmpty()) {
+            studentId = prefs.getString("LATEST_STUDENT_ID", "");
         }
 
         // handle back button click
@@ -111,9 +115,16 @@ public class PaymentActivity extends AppCompatActivity {
                 json.put("paymentMethod", "M-PESA");
                 json.put("paymentStatus", "Confirmed");
                 json.put("phoneNumber", phone);
-                prefs.edit().putString(studentId, json.toString()).apply();
+                String jsonStr = json.toString();
+
+                String regNum = json.optString("regNumber", "");
+                SharedPreferences.Editor editor = prefs.edit().putString(studentId, jsonStr);
+                if (!regNum.isEmpty()) {
+                    editor.putString(regNum, jsonStr);
+                }
+                editor.apply();
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e(TAG, "error saving payment transaction to local prefs: " + e.getMessage());
             }
 
             Toast.makeText(this, "m-pesa payment confirmed! fee balance: kshs " + feeBalance, Toast.LENGTH_LONG).show();
