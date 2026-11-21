@@ -16,6 +16,7 @@ import com.example.universityregistration.R;
 import com.example.universityregistration.models.PaymentTransaction;
 import com.example.universityregistration.database.FirebaseHelper;
 import org.json.JSONObject;
+import java.util.Map;
 
 public class PaymentActivity extends AppCompatActivity {
 
@@ -107,11 +108,7 @@ public class PaymentActivity extends AppCompatActivity {
             // safely update consolidated student profile in local preferences
             try {
                 SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
-                String existing = prefs.getString(studentId, null);
-                if (existing == null) {
-                    existing = prefs.getString("STUDENT_" + studentId, "{}");
-                }
-                JSONObject json = new JSONObject(existing);
+                JSONObject json = getOrCreateStudentJson(prefs, studentId);
                 json.put("totalFee", totalFee);
                 json.put("amountPaid", amount);
                 json.put("feeBalance", feeBalance);
@@ -121,7 +118,11 @@ public class PaymentActivity extends AppCompatActivity {
                 String jsonStr = json.toString();
 
                 String regNum = json.optString("regNumber", "");
-                SharedPreferences.Editor editor = prefs.edit().putString(studentId, jsonStr).putString("STUDENT_" + studentId, jsonStr);
+                String realId = json.optString("idNumber", studentId);
+                SharedPreferences.Editor editor = prefs.edit()
+                        .putString(studentId, jsonStr)
+                        .putString(realId, jsonStr)
+                        .putString("STUDENT_" + realId, jsonStr);
                 if (!regNum.isEmpty()) {
                     editor.putString(regNum, jsonStr);
                 }
@@ -139,5 +140,38 @@ public class PaymentActivity extends AppCompatActivity {
         });
 
         builder.show();
+    }
+
+    private JSONObject getOrCreateStudentJson(SharedPreferences prefs, String studentId) {
+        String jsonStr = prefs.getString(studentId, null);
+        if (jsonStr == null || !jsonStr.contains("fullName")) {
+            jsonStr = prefs.getString("STUDENT_" + studentId, null);
+        }
+        if (jsonStr == null || !jsonStr.contains("fullName")) {
+            String latestId = prefs.getString("LATEST_STUDENT_ID", "");
+            if (!latestId.isEmpty()) {
+                jsonStr = prefs.getString(latestId, null);
+            }
+        }
+        if (jsonStr == null || !jsonStr.contains("fullName")) {
+            Map<String, ?> all = prefs.getAll();
+            for (Map.Entry<String, ?> entry : all.entrySet()) {
+                if (entry.getValue() instanceof String) {
+                    String str = (String) entry.getValue();
+                    if (str.contains("fullName") && str.contains("regNumber")) {
+                        jsonStr = str;
+                        break;
+                    }
+                }
+            }
+        }
+        try {
+            if (jsonStr != null && !jsonStr.isEmpty()) {
+                return new JSONObject(jsonStr);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "error parsing student json: " + e.getMessage());
+        }
+        return new JSONObject();
     }
 }
