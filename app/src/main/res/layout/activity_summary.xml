@@ -143,6 +143,16 @@
             android:textColor="@color/card_white"
             android:layout_marginBottom="12dp" />
 
+        <!-- Go To Registration Page Button -->
+        <Button
+            android:id="@+id/btnGoToRegistration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Start New Student Registration"
+            android:backgroundTint="@color/primary_blue"
+            android:textColor="@color/card_white"
+            android:layout_marginBottom="12dp" />
+
         <!-- Back Button -->
         <Button
             android:id="@+id/btnBack"

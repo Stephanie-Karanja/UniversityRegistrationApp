@@ -1,6 +1,7 @@
 package com.example.universityregistration.activities;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -47,6 +48,7 @@ public class SummaryActivity extends AppCompatActivity {
         Button btnViewIndividual = findViewById(R.id.btnViewIndividual);
         Button btnViewAll = findViewById(R.id.btnViewAll);
         Button btnPrintReport = findViewById(R.id.btnPrintReport);
+        Button btnGoToRegistration = findViewById(R.id.btnGoToRegistration);
         Button btnBack = findViewById(R.id.btnBack);
         tvSummaryContent = findViewById(R.id.tvSummaryContent);
         scrollTableContainer = findViewById(R.id.scrollTableContainer);
@@ -71,6 +73,16 @@ public class SummaryActivity extends AppCompatActivity {
         // handle back button click
         if (btnBack != null) {
             btnBack.setOnClickListener(v -> finish());
+        }
+
+        // handle go to registration page button click
+        if (btnGoToRegistration != null) {
+            btnGoToRegistration.setOnClickListener(v -> {
+                Intent intent = new Intent(SummaryActivity.this, RegistrationActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                finish();
+            });
         }
 
         // handle individual student search button click
