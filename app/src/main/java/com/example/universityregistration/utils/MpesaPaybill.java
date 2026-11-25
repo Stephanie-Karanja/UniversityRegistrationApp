@@ -18,11 +18,32 @@ import java.util.concurrent.Executors;
 public class MpesaPaybill {
     private static final String TAG = "MpesaPaybill";
 
-    // safaricom daraja API sandbox credentials
-    private static final String CONSUMER_KEY = "Yq0Xd98UO0x7byB9RmQlt4oOAxqHsvOSgjI0LsccdrO1IdFW";
-    private static final String CONSUMER_SECRET = "mV6FB6WeOdmzwBCB5fGaUSsDeY0XtmiZFsDUl7v6jjwGrGDlZxBsT5D52KiDc3vr";
-    private static final String PASSKEY = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919";
-    private static final String SHORTCODE = "174379";
+    // toggle flag for sandbox vs production go-live mode
+    private static final boolean IS_PRODUCTION = false;
+
+    // safaricom daraja API base endpoints
+    private static final String BASE_URL = IS_PRODUCTION
+            ? "https://api.safaricom.co.ke"
+            : "https://sandbox.safaricom.co.ke";
+
+    // safaricom daraja API consumer key credentials
+    private static final String CONSUMER_KEY = IS_PRODUCTION
+            ? "YOUR_PRODUCTION_CONSUMER_KEY"
+            : "Yq0Xd98UO0x7byB9RmQlt4oOAxqHsvOSgjI0LsccdrO1IdFW";
+
+    // safaricom daraja API consumer secret credentials
+    private static final String CONSUMER_SECRET = IS_PRODUCTION
+            ? "YOUR_PRODUCTION_CONSUMER_SECRET"
+            : "mV6FB6WeOdmzwBCB5fGaUSsDeY0XtmiZFsDUl7v6jjwGrGDlZxBsT5D52KiDc3vr";
+
+    // safaricom daraja API passkey and shortcode
+    private static final String PASSKEY = IS_PRODUCTION
+            ? "YOUR_PRODUCTION_PASSKEY"
+            : "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919";
+
+    private static final String SHORTCODE = IS_PRODUCTION
+            ? "YOUR_PRODUCTION_SHORTCODE"
+            : "174379";
 
     // callback interface for m-pesa payment results
     public interface MpesaCallback {
@@ -30,11 +51,11 @@ public class MpesaPaybill {
         void onError(String message);
     }
 
-    // trigger real daraja stk push via safaricom API
+    // trigger daraja stk push via safaricom API (sandbox or production)
     public static void triggerStkPush(String rawPhone, double amount, MpesaCallback callback) {
         // format phone number to 2547XXXXXXXX or 2541XXXXXXXX
         String phone = formatPhoneNumber(rawPhone);
-        Log.d(TAG, "initiating daraja stk push for phone: " + phone + " amount: Kshs " + amount);
+        Log.d(TAG, "initiating daraja stk push for phone: " + phone + " amount: Kshs " + amount + " (production=" + IS_PRODUCTION + ")");
 
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
@@ -64,7 +85,7 @@ public class MpesaPaybill {
                 payload.put("AccountReference", "USIU_REGISTRATION");
                 payload.put("TransactionDesc", "USIU Fee Payment");
 
-                URL stkUrl = new URL("https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest");
+                URL stkUrl = new URL(BASE_URL + "/mpesa/stkpush/v1/processrequest");
                 HttpURLConnection conn = (HttpURLConnection) stkUrl.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Authorization", "Bearer " + accessToken);
@@ -100,7 +121,7 @@ public class MpesaPaybill {
     // fetch oauth access token from safaricom daraja endpoint
     private static String getAccessToken() {
         try {
-            URL url = new URL("https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials");
+            URL url = new URL(BASE_URL + "/oauth/v1/generate?grant_type=client_credentials");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             String auth = CONSUMER_KEY + ":" + CONSUMER_SECRET;
