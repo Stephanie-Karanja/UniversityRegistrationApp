@@ -1,7 +1,6 @@
 package com.example.universityregistration.activities;
 
 import android.Manifest;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -9,7 +8,6 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.telephony.SmsManager;
-import android.text.InputType;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
@@ -18,11 +16,18 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.example.universityregistration.R;
 import com.example.universityregistration.database.FirebaseHelper;
 import com.example.universityregistration.models.PaymentTransaction;
 import com.example.universityregistration.utils.MpesaPaybill;
+
+import org.json.JSONObject;
+
+import java.util.Locale;
+import java.util.Map;
 
 public class PaymentActivity extends AppCompatActivity {
 
@@ -67,74 +72,12 @@ public class PaymentActivity extends AppCompatActivity {
         // handle m-pesa payment button click
         btnPayMpesa.setOnClickListener(v -> startPayment());
 
-        // handle negative cancel button click
-        builder.setNegativeButton("cancel", (dialog, which) -> {
-            dialog.dismiss();
-            Toast.makeText(this, "m-pesa payment cancelled", Toast.LENGTH_SHORT).show();
+        // navigate to summary reports activity
+        btnViewSummary.setOnClickListener(v -> {
+            Intent intent = new Intent(PaymentActivity.this, SummaryActivity.class);
+            intent.putExtra("STUDENT_ID", studentId);
+            startActivity(intent);
         });
-
-        builder.show();
-    }
-
-    // send real sms text message directly to phone using android sms manager
-    private void sendMpesaConfirmationSms(String phone, double amount, double feeBalance, String txId) {
-        try {
-            SmsManager smsManager;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                smsManager = getSystemService(SmsManager.class);
-            } else {
-                smsManager = SmsManager.getDefault();
-            }
-
-            String smsMessage = "M-PESA Confirmed. Ksh" + String.format(Locale.US, "%.2f", amount) +
-                    " paid to USIU Paybill 123456. Transaction ID: " + txId +
-                    ". Fee Balance: Ksh" + String.format(Locale.US, "%.2f", feeBalance) + ".";
-
-            smsManager.sendTextMessage(phone, null, smsMessage, null, null);
-            Log.d(TAG, "m-pesa confirmation sms sent to " + phone);
-        } catch (Exception e) {
-            Log.e(TAG, "error sending m-pesa confirmation sms: " + e.getMessage());
-        }
-    }
-
-    private void checkSmsPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.SEND_SMS}, SMS_PERMISSION_CODE);
-        }
-    }
-
-    // helper method to retrieve existing student JSON profile or search by id/reg number
-    private JSONObject getOrCreateStudentJson(SharedPreferences prefs, String studentId) {
-        String jsonStr = prefs.getString(studentId, null);
-        if (jsonStr == null || !jsonStr.contains("fullName")) {
-            jsonStr = prefs.getString("STUDENT_" + studentId, null);
-        }
-        if (jsonStr == null || !jsonStr.contains("fullName")) {
-            String latestId = prefs.getString("LATEST_STUDENT_ID", "");
-            if (!latestId.isEmpty()) {
-                jsonStr = prefs.getString(latestId, null);
-            }
-        }
-        if (jsonStr == null || !jsonStr.contains("fullName")) {
-            Map<String, ?> all = prefs.getAll();
-            for (Map.Entry<String, ?> entry : all.entrySet()) {
-                if (entry.getValue() instanceof String) {
-                    String str = (String) entry.getValue();
-                    if (str.contains("fullName") && str.contains("regNumber")) {
-                        jsonStr = str;
-                        break;
-                    }
-                }
-            }
-        }
-        try {
-            if (jsonStr != null && !jsonStr.isEmpty()) {
-                return new JSONObject(jsonStr);
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "error parsing student json: " + e.getMessage());
-        }
-        return new JSONObject();
     }
 
     private void startPayment() {
@@ -180,6 +123,8 @@ public class PaymentActivity extends AppCompatActivity {
                         refId, phone, amount, transactionId, "confirmed");
                 firebaseHelper.savePaymentTransaction(tx);
 
+                sendReceiptSms(phone, amount, transactionId);
+
                 new AlertDialog.Builder(PaymentActivity.this)
                         .setTitle("Payment accepted")
                         .setMessage("Your payment of KSh " + (int) amount + " was received successfully.")
@@ -196,5 +141,70 @@ public class PaymentActivity extends AppCompatActivity {
                 tvPaymentStatus.setTextColor(getResources().getColor(R.color.error_red));
             }
         });
+    }
+
+    // sends an app receipt sms (only if the sms permission was granted)
+    private void sendReceiptSms(String phone, double amount, String ref) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
+                != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        try {
+            SmsManager smsManager;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                smsManager = getSystemService(SmsManager.class);
+            } else {
+                smsManager = SmsManager.getDefault();
+            }
+            String msg = "University Registration App: fee payment of Ksh "
+                    + String.format(Locale.US, "%.2f", amount)
+                    + " received. Ref: " + ref + ".";
+            smsManager.sendTextMessage(phone, null, msg, null, null);
+            Log.d(TAG, "receipt sms sent to " + phone);
+        } catch (Exception e) {
+            Log.e(TAG, "error sending receipt sms: " + e.getMessage());
+        }
+    }
+
+    private void checkSmsPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.SEND_SMS}, SMS_PERMISSION_CODE);
+        }
+    }
+
+    // helper method to retrieve existing student JSON profile or search by id/reg number
+    private JSONObject getOrCreateStudentJson(SharedPreferences prefs, String studentId) {
+        String jsonStr = prefs.getString(studentId, null);
+        if (jsonStr == null || !jsonStr.contains("fullName")) {
+            jsonStr = prefs.getString("STUDENT_" + studentId, null);
+        }
+        if (jsonStr == null || !jsonStr.contains("fullName")) {
+            String latestId = prefs.getString("LATEST_STUDENT_ID", "");
+            if (!latestId.isEmpty()) {
+                jsonStr = prefs.getString(latestId, null);
+            }
+        }
+        if (jsonStr == null || !jsonStr.contains("fullName")) {
+            Map<String, ?> all = prefs.getAll();
+            for (Map.Entry<String, ?> entry : all.entrySet()) {
+                if (entry.getValue() instanceof String) {
+                    String str = (String) entry.getValue();
+                    if (str.contains("fullName") && str.contains("regNumber")) {
+                        jsonStr = str;
+                        break;
+                    }
+                }
+            }
+        }
+        try {
+            if (jsonStr != null && !jsonStr.isEmpty()) {
+                return new JSONObject(jsonStr);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "error parsing student json: " + e.getMessage());
+        }
+        return new JSONObject();
     }
 }
