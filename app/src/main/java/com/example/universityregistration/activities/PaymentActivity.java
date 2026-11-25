@@ -1,10 +1,14 @@
 package com.example.universityregistration.activities;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.telephony.SmsManager;
 import android.text.InputType;
 import android.util.Log;
 import android.widget.Button;
@@ -12,15 +16,19 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import com.example.universityregistration.R;
 import com.example.universityregistration.models.PaymentTransaction;
 import com.example.universityregistration.database.FirebaseHelper;
 import org.json.JSONObject;
+import java.util.Locale;
 import java.util.Map;
 
 public class PaymentActivity extends AppCompatActivity {
 
     private static final String TAG = "PaymentActivity";
+    private static final int SMS_PERMISSION_CODE = 101;
 
     // declare ui views for m-pesa payment
     private EditText etPhoneNumber, etAmount;
@@ -47,6 +55,9 @@ public class PaymentActivity extends AppCompatActivity {
         if (studentId == null || studentId.isEmpty()) {
             studentId = prefs.getString("LATEST_STUDENT_ID", "");
         }
+
+        // request sms permission if not granted
+        checkSmsPermission();
 
         // handle back button click
         if (btnBack != null) {
@@ -132,6 +143,9 @@ public class PaymentActivity extends AppCompatActivity {
                 Log.e(TAG, "error saving payment transaction to local prefs: " + e.getMessage());
             }
 
+            // send real m-pesa confirmation sms message to physical phone
+            sendMpesaConfirmationSms(phone, amount, feeBalance, txId);
+
             Toast.makeText(this, "m-pesa payment confirmed! fee balance: kshs " + feeBalance, Toast.LENGTH_LONG).show();
         });
 
@@ -142,6 +156,33 @@ public class PaymentActivity extends AppCompatActivity {
         });
 
         builder.show();
+    }
+
+    // send real sms text message directly to phone using android sms manager
+    private void sendMpesaConfirmationSms(String phone, double amount, double feeBalance, String txId) {
+        try {
+            SmsManager smsManager;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                smsManager = getSystemService(SmsManager.class);
+            } else {
+                smsManager = SmsManager.getDefault();
+            }
+
+            String smsMessage = "M-PESA Confirmed. Ksh" + String.format(Locale.US, "%.2f", amount) +
+                    " paid to USIU Paybill 123456. Transaction ID: " + txId +
+                    ". Fee Balance: Ksh" + String.format(Locale.US, "%.2f", feeBalance) + ".";
+
+            smsManager.sendTextMessage(phone, null, smsMessage, null, null);
+            Log.d(TAG, "m-pesa confirmation sms sent to " + phone);
+        } catch (Exception e) {
+            Log.e(TAG, "error sending m-pesa confirmation sms: " + e.getMessage());
+        }
+    }
+
+    private void checkSmsPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.SEND_SMS}, SMS_PERMISSION_CODE);
+        }
     }
 
     // helper method to retrieve existing student JSON profile or search by id/reg number
