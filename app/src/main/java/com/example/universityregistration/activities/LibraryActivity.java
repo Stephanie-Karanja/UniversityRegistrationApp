@@ -1,7 +1,12 @@
 package com.example.universityregistration.activities;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -11,10 +16,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.universityregistration.R;
 import com.example.universityregistration.models.LibraryRequest;
 import com.example.universityregistration.database.FirebaseHelper;
+import org.json.JSONObject;
+import java.util.Map;
 
 public class LibraryActivity extends AppCompatActivity {
 
-    // ui views for library book request
+    private static final String TAG = "LibraryActivity";
+
+    // declare ui views for library book selection and student id
     private EditText etStudentId;
     private Spinner spinnerIsbn, spinnerAuthor, spinnerTitle, spinnerDateBorrowed, spinnerDateReturn;
     private FirebaseHelper firebaseHelper;
@@ -24,7 +33,7 @@ public class LibraryActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_library);
 
-        // bind views from xml layout
+        // bind views from xml layout file
         etStudentId = findViewById(R.id.etStudentId);
         spinnerIsbn = findViewById(R.id.spinnerIsbn);
         spinnerAuthor = findViewById(R.id.spinnerAuthor);
@@ -36,48 +45,99 @@ public class LibraryActivity extends AppCompatActivity {
 
         firebaseHelper = new FirebaseHelper();
 
-        // pre-fill student id if passed from previous activity
+        // retrieve student id from intent or latest active session cache
+        SharedPreferences prefs = getSharedPreferences("OfflineRegistrationCache", Context.MODE_PRIVATE);
         String studentId = getIntent().getStringExtra("STUDENT_ID");
-        if (studentId != null) {
+        if (studentId == null || studentId.isEmpty()) {
+            studentId = prefs.getString("LATEST_STUDENT_ID", "");
+        }
+        if (!studentId.isEmpty()) {
             etStudentId.setText(studentId);
         }
 
-        // populate isbn selection spinner
-        String[] isbns = {"978-0131103627", "978-1484251266", "978-0321765723", "978-0201633610"};
-        ArrayAdapter<String> isbnAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, isbns);
-        isbnAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerIsbn.setAdapter(isbnAdapter);
+        // define 10 university textbook examples with titles, authors, and isbns
+        String[] titles = {
+                "Software Engineering: A Practitioner's Approach",
+                "Introduction to International Relations: Theories and Approaches",
+                "Introduction to Psychology",
+                "Accounting Principles",
+                "Principles of Corporate Finance",
+                "Data Science for Business",
+                "Artificial Intelligence: A Modern Approach",
+                "International Business",
+                "The Elements of Journalism",
+                "Pharmacotherapy: A Pathophysiologic Approach"
+        };
 
-        // populate author selection spinner
-        String[] authors = {"cormen et al.", "bill phillips", "brian goetz", "erich gamma"};
-        ArrayAdapter<String> authorAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, authors);
-        authorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerAuthor.setAdapter(authorAdapter);
+        String[] authors = {
+                "Roger S. Pressman & Bruce R. Maxim",
+                "Robert Jackson & Georg Sørensen",
+                "James W. Kalat",
+                "Jerry J. Weygandt, Paul D. Kimmel & Donald E. Kieso",
+                "Richard A. Brealey, Stewart C. Myers & Franklin Allen",
+                "Foster Provost & Tom Fawcett",
+                "Stuart Russell & Peter Norvig",
+                "Mike W. Peng & Klaus Meyer",
+                "Bill Kovach & Tom Rosenstiel",
+                "Joseph T. DiPiro et al."
+        };
 
-        // populate title selection spinner
-        String[] titles = {"introduction to algorithms", "android programming", "java concurrency in practice", "design patterns"};
+        String[] isbns = {
+                "978-1259872976",
+                "978-0198825548",
+                "978-1305271555",
+                "978-1119491002",
+                "978-1260013900",
+                "978-1449361327",
+                "978-0134610993",
+                "978-1473758438",
+                "978-0451497024",
+                "978-1260115680"
+        };
+
+        // populate dropdown spinners for title, author, and isbn
         ArrayAdapter<String> titleAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, titles);
         titleAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerTitle.setAdapter(titleAdapter);
 
-        // populate date borrowed spinner
+        ArrayAdapter<String> authorAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, authors);
+        authorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerAuthor.setAdapter(authorAdapter);
+
+        ArrayAdapter<String> isbnAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, isbns);
+        isbnAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerIsbn.setAdapter(isbnAdapter);
+
+        // sync author and isbn spinners automatically when a book title is chosen
+        spinnerTitle.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                spinnerAuthor.setSelection(position);
+                spinnerIsbn.setSelection(position);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        // populate borrow date selection spinner
         String[] borrowDates = {"01/10/2026", "02/10/2026", "03/10/2026", "04/10/2026"};
         ArrayAdapter<String> borrowAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, borrowDates);
         borrowAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerDateBorrowed.setAdapter(borrowAdapter);
 
-        // populate return date spinner
+        // populate return date selection spinner
         String[] returnDates = {"01/12/2026", "15/12/2026", "31/12/2026", "15/01/2027"};
         ArrayAdapter<String> returnAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, returnDates);
         returnAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerDateReturn.setAdapter(returnAdapter);
 
-        // handle back button click
+        // handle back button click to return to previous activity
         if (btnBack != null) {
             btnBack.setOnClickListener(v -> finish());
         }
 
-        // handle proceed button click
+        // handle proceed button click to validate and submit library request
         btnProceedHostel.setOnClickListener(v -> {
             String sId = etStudentId.getText().toString().trim();
             String isbn = spinnerIsbn.getSelectedItem().toString();
@@ -92,16 +152,73 @@ public class LibraryActivity extends AppCompatActivity {
                 return;
             }
 
-            // create library request object and save to firebase
+            // create library request object and save to firebase under /library_requests/{sId}
             LibraryRequest request = new LibraryRequest(sId, isbn, title, author, dateBorrowed, dateReturn);
             firebaseHelper.saveLibraryRequest(request);
 
+            // merge book details into local student profile JSON without losing personal details
+            try {
+                JSONObject json = getOrCreateStudentJson(prefs, sId);
+                json.put("bookTitle", title);
+                json.put("returnDate", dateReturn);
+                json.put("bookIsbn", isbn);
+                json.put("bookAuthor", author);
+                String jsonStr = json.toString();
+
+                String regNum = json.optString("regNumber", "");
+                String realId = json.optString("idNumber", sId);
+                SharedPreferences.Editor editor = prefs.edit()
+                        .putString(sId, jsonStr)
+                        .putString(realId, jsonStr)
+                        .putString("STUDENT_" + realId, jsonStr);
+                if (!regNum.isEmpty()) {
+                    editor.putString(regNum, jsonStr);
+                }
+                editor.apply();
+            } catch (Exception e) {
+                Log.e(TAG, "error saving library request to local prefs: " + e.getMessage());
+            }
+
             Toast.makeText(this, "library book request submitted successfully!", Toast.LENGTH_SHORT).show();
 
-            // navigate to hostel activity
+            // navigate to hostel accommodation activity
             Intent intent = new Intent(LibraryActivity.this, HostelActivity.class);
             intent.putExtra("STUDENT_ID", sId);
             startActivity(intent);
         });
+    }
+
+    // helper method to retrieve existing student JSON profile or search by id/reg number
+    private JSONObject getOrCreateStudentJson(SharedPreferences prefs, String studentId) {
+        String jsonStr = prefs.getString(studentId, null);
+        if (jsonStr == null || !jsonStr.contains("fullName")) {
+            jsonStr = prefs.getString("STUDENT_" + studentId, null);
+        }
+        if (jsonStr == null || !jsonStr.contains("fullName")) {
+            String latestId = prefs.getString("LATEST_STUDENT_ID", "");
+            if (!latestId.isEmpty()) {
+                jsonStr = prefs.getString(latestId, null);
+            }
+        }
+        if (jsonStr == null || !jsonStr.contains("fullName")) {
+            Map<String, ?> all = prefs.getAll();
+            for (Map.Entry<String, ?> entry : all.entrySet()) {
+                if (entry.getValue() instanceof String) {
+                    String str = (String) entry.getValue();
+                    if (str.contains("fullName") && str.contains("regNumber")) {
+                        jsonStr = str;
+                        break;
+                    }
+                }
+            }
+        }
+        try {
+            if (jsonStr != null && !jsonStr.isEmpty()) {
+                return new JSONObject(jsonStr);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "error parsing student json: " + e.getMessage());
+        }
+        return new JSONObject();
     }
 }

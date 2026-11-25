@@ -9,19 +9,20 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="24dp"
+        android:gravity="center_vertical">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Library Book Request"
             android:textColor="@color/text_dark"
-            android:textSize="22sp"
+            android:textSize="24sp"
             android:textStyle="bold"
             android:gravity="center"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="24dp" />
 
         <EditText
             android:id="@+id/etStudentId"
@@ -32,7 +33,8 @@
             android:autofillHints="personId"
             android:textColor="@color/text_dark"
             android:textColorHint="@color/text_muted"
-            android:layout_marginBottom="12dp" />
+            android:minHeight="48dp"
+            android:layout_marginBottom="16dp" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -40,13 +42,14 @@
             android:text="Book ISBN (Select)"
             android:textColor="@color/text_dark"
             android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="8dp" />
 
         <Spinner
             android:id="@+id/spinnerIsbn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp" />
+            android:minHeight="48dp"
+            android:layout_marginBottom="16dp" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -54,13 +57,14 @@
             android:text="Author (Select)"
             android:textColor="@color/text_dark"
             android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="8dp" />
 
         <Spinner
             android:id="@+id/spinnerAuthor"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp" />
+            android:minHeight="48dp"
+            android:layout_marginBottom="16dp" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -68,13 +72,14 @@
             android:text="Book Title (Select)"
             android:textColor="@color/text_dark"
             android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="8dp" />
 
         <Spinner
             android:id="@+id/spinnerTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp" />
+            android:minHeight="48dp"
+            android:layout_marginBottom="16dp" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -82,13 +87,14 @@
             android:text="Date Borrowed (Select)"
             android:textColor="@color/text_dark"
             android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="8dp" />
 
         <Spinner
             android:id="@+id/spinnerDateBorrowed"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp" />
+            android:minHeight="48dp"
+            android:layout_marginBottom="16dp" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -96,13 +102,14 @@
             android:text="Date of Return (Select)"
             android:textColor="@color/text_dark"
             android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="8dp" />
 
         <Spinner
             android:id="@+id/spinnerDateReturn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp" />
+            android:minHeight="48dp"
+            android:layout_marginBottom="32dp" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -118,6 +125,7 @@
                 android:text="Back"
                 android:backgroundTint="@color/text_muted"
                 android:textColor="@color/card_white"
+                android:padding="12dp"
                 android:layout_marginEnd="8dp" />
 
             <Button
@@ -128,6 +136,7 @@
                 android:text="Proceed to Hostel"
                 android:backgroundTint="@color/primary_blue"
                 android:textColor="@color/card_white"
+                android:padding="12dp"
                 android:layout_marginStart="8dp" />
         </LinearLayout>
 
